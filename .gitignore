@@ -1,0 +1,18 @@
+# Go
+/services/*/bin/
+*.exe
+*.test
+
+# Node / Next.js (apps/dashboard has its own .gitignore for the rest)
+node_modules/
+
+# Env / secrets
+.env
+.env.local
+*.env
+!*.env.example
+!.env.local.example
+
+# OS
+.DS_Store
+Thumbs.db

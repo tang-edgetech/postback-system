@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS fraud_datacenter_ip_ranges;
+DROP TABLE IF EXISTS fraud_bot_user_agents;
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS postback_events;
+DROP TABLE IF EXISTS link_clicks;
+DROP TABLE IF EXISTS links;
+DROP TABLE IF EXISTS campaigns;
+DROP TABLE IF EXISTS tenants;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS user_sessions;
+DROP TABLE IF EXISTS two_factor_secrets;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
