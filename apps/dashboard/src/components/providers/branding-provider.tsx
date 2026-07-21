@@ -39,15 +39,29 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.title = branding.siteTitle;
-    if (branding.faviconUrl) {
-      let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "icon";
-        document.head.appendChild(link);
-      }
-      link.href = branding.faviconUrl;
+    const href = branding.faviconUrl ?? "/default-favicon.ico";
+    // This tag is exclusively owned by BrandingProvider (there is no app/favicon.ico for
+    // Next to auto-generate a competing one) — mutate the same node in place rather than
+    // removing/replacing it, since React/Next never renders a <link rel="icon"> for this
+    // app and there's nothing else that could hold a stale reference to it.
+    let link = document.getElementById("dynamic-favicon") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.id = "dynamic-favicon";
+      link.rel = "icon";
+      document.head.appendChild(link);
     }
+    const ext = href.split(".").pop()?.toLowerCase();
+    const mime: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      svg: "image/svg+xml",
+      ico: "image/x-icon",
+      webp: "image/webp",
+    };
+    link.type = (ext && mime[ext]) || "image/x-icon";
+    link.href = href;
   }, [branding]);
 
   useEffect(() => {

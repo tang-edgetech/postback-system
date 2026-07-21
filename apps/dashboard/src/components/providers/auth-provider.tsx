@@ -17,7 +17,7 @@ export type SessionUser = {
   permissions: Permissions;
 };
 
-type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "session_expired";
 
 export type LoginResult = SessionUser | { two_fa_required: true; pending_token: string };
 
@@ -38,13 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const me = await api.get<{ authenticated: boolean } & Partial<SessionUser>>("/v1/auth/me");
+      const me = await api.get<{ authenticated: boolean; reason?: string } & Partial<SessionUser>>("/v1/auth/me");
       if (me.authenticated) {
         setUser(me as SessionUser);
         setStatus("authenticated");
       } else {
         setUser(null);
-        setStatus("unauthenticated");
+        setStatus(me.reason === "session_expired" ? "session_expired" : "unauthenticated");
       }
     } catch {
       setUser(null);
@@ -58,6 +58,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    // Idle sessions (server-side 2h TTL) would otherwise only surface as a failed
+    // request on the user's next click — poll while authenticated so it's caught and
+    // shown as the session-expired modal instead.
+    if (status !== "authenticated") return;
+    const interval = setInterval(refresh, 60_000);
+    return () => clearInterval(interval);
+  }, [status, refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await api.post<LoginResult>("/v1/auth/login", { email, password });

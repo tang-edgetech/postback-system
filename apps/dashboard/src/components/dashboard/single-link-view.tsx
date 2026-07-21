@@ -210,7 +210,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
         <LinksIcon className="text-foreground-muted" />
         <span className="text-lg font-semibold text-foreground">{toTitleCase(link.type)}</span>
         <span
-          className={`c-badge inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+          className={`c-badge inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${
             link.status === "active"
               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
               : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
@@ -222,7 +222,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
 
       <div className="mt-4 flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4">
         <div>
-          <p className="text-xs text-foreground-muted">Short Link</p>
+          <p className="text-md text-foreground-muted">Short Link</p>
           <p className="text-foreground">{shortUrl}</p>
         </div>
         <CopyButton id="single-link-copy" value={shortUrl} />
@@ -246,7 +246,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
         <div className="mt-6 flex flex-col gap-6">
           <div id="single-link-basic-info" className="rounded-lg border border-border bg-surface p-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Basic Information</h2>
+              <h2 className="text-[20px] leading-7 font-semibold text-foreground">Basic Information</h2>
               {canEdit && !editing && <IconButton id="single-link-edit-toggle" icon={<EditIcon />} label="Edit" onClick={() => setEditing(true)} />}
             </div>
 
@@ -280,7 +280,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                 />
                 <Input id="single-link-merchant" label="Merchant" value={selectedMerchantName} disabled className="cursor-not-allowed" />
                 <div className="c-field flex flex-col gap-1">
-                  <label htmlFor="single-link-expires-at" className="c-field__label text-sm font-medium text-foreground">
+                  <label htmlFor="single-link-expires-at" className="c-field__label text-md font-medium text-foreground">
                     Expires At (Optional)
                   </label>
                   <input
@@ -293,7 +293,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                   />
                 </div>
                 <div className="c-field flex flex-col gap-1 md:col-span-2">
-                  <label htmlFor="single-link-remarks" className="c-field__label text-sm font-medium text-foreground">
+                  <label htmlFor="single-link-remarks" className="c-field__label text-md font-medium text-foreground">
                     Remarks (Optional)
                   </label>
                   <textarea
@@ -321,14 +321,14 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
 
           <div id="single-link-visits" className="c-single-link__visits w-full">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Visits</h2>
+              <h2 className="text-[20px] leading-7 font-semibold text-foreground">Visits</h2>
               <IconButton id="single-link-visits-refresh" icon={<RefreshIcon />} label="Refresh" onClick={() => clicks.refetch()} />
             </div>
 
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <SearchInput id="single-link-visits-search" value={clicks.search} onChange={clicks.setSearch} placeholder="Search event name or extra fields…" />
               <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-xs font-medium text-foreground-muted">Created From</label>
+                <label className="c-field__label text-md font-medium text-foreground-muted">Created From</label>
                 <input
                   id="single-link-visits-date-from"
                   type="date"
@@ -338,7 +338,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                 />
               </div>
               <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-xs font-medium text-foreground-muted">Created To</label>
+                <label className="c-field__label text-md font-medium text-foreground-muted">Created To</label>
                 <input
                   id="single-link-visits-date-to"
                   type="date"
@@ -348,7 +348,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                 />
               </div>
               <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-xs font-medium text-foreground-muted">Postback Received From</label>
+                <label className="c-field__label text-md font-medium text-foreground-muted">Postback Received From</label>
                 <input
                   id="single-link-visits-postback-from"
                   type="date"
@@ -358,7 +358,7 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                 />
               </div>
               <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-xs font-medium text-foreground-muted">Postback Received To</label>
+                <label className="c-field__label text-md font-medium text-foreground-muted">Postback Received To</label>
                 <input
                   id="single-link-visits-postback-to"
                   type="date"
@@ -433,21 +433,21 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                             )}
                           </td>
                           <td className="whitespace-nowrap px-4 py-[14px] text-foreground-muted">{new Date(c.clicked_at).toLocaleString()}</td>
-                          <td className="px-4 py-[14px] font-mono text-xs text-foreground">{c.cid}</td>
+                          <td className="px-4 py-[14px] font-mono text-md text-foreground">{c.cid}</td>
                           <td className="px-4 py-[14px] text-foreground">{c.ip || "—"}</td>
                           <td className="px-4 py-[14px] text-foreground">{local ? "Local Network" : c.country || "Unknown"}</td>
                           <td className="px-4 py-[14px] text-foreground">{local ? "—" : c.city || "Unknown"}</td>
                           <td className="px-4 py-[14px] text-foreground">{c.device}</td>
                           <td className="px-4 py-[14px] text-foreground">{c.os}</td>
                           <td className="px-4 py-[14px] text-foreground">{c.browser}</td>
-                          <td className="max-w-xs truncate px-4 py-[14px] text-xs text-foreground-muted">{formatParams(c.params)}</td>
+                          <td className="max-w-xs truncate px-4 py-[14px] text-md text-foreground-muted">{formatParams(c.params)}</td>
                         </tr>
                         {expanded && hasPostbacks && (
                           <tr className="border-t border-border bg-surface-alt">
                             <td />
                             <td colSpan={9} className="px-4 py-[14px]">
-                              <p className="text-xs font-medium text-foreground-muted">Postbacks Received For CID {c.cid}</p>
-                              <table className="mt-2 w-full text-left text-xs">
+                              <p className="text-md font-medium text-foreground-muted">Postbacks Received For CID {c.cid}</p>
+                              <table className="mt-2 w-full text-left text-md">
                                 <thead className="text-foreground-muted">
                                   <tr>
                                     <th className="py-1 pr-4 font-medium">Event</th>
@@ -490,18 +490,18 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
             whenever a trackable event happens (e.g. a purchase), passing back that click&apos;s <code>cid</code>.
           </p>
           <div>
-            <p className="mb-1 text-xs font-medium text-foreground-muted">GET Request</p>
-            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-emerald-300">
+            <p className="mb-1 text-md font-medium text-foreground-muted">GET Request</p>
+            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-md text-emerald-300">
               <code>{`GET ${apiBase}/postback?cid={cid}&tid={tid}&event_name={event_name}`}</code>
             </pre>
           </div>
           <div>
-            <p className="mb-1 text-xs font-medium text-foreground-muted">POST Request</p>
-            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-emerald-300">
+            <p className="mb-1 text-md font-medium text-foreground-muted">POST Request</p>
+            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-md text-emerald-300">
               <code>{`POST ${apiBase}/postback\nContent-Type: application/x-www-form-urlencoded\n\ncid={cid}&tid={tid}&event_name={event_name}`}</code>
             </pre>
           </div>
-          <p className="text-xs text-foreground-muted">
+          <p className="text-md text-foreground-muted">
             <code>{"{cid}"}</code> and <code>{"{tid}"}</code> are placeholders — use the actual values captured on your side from this link&apos;s redirect and this
             page&apos;s Visits table. Any extra fields sent besides cid/tid/event_name are stored and shown against the matching visit above.
           </p>
@@ -541,9 +541,9 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
                     <td className="whitespace-nowrap px-4 py-3 text-foreground-muted">{new Date(h.created_at).toLocaleString()}</td>
                     <td className="px-4 py-3 text-foreground">
                       {h.actor_full_name || "System"}
-                      {h.actor_email && <span className="ml-1 text-xs text-foreground-muted">({h.actor_email})</span>}
+                      {h.actor_email && <span className="ml-1 text-md text-foreground-muted">({h.actor_email})</span>}
                     </td>
-                    <td className="max-w-xs truncate px-4 py-3 text-xs text-foreground-muted">{formatParams(h.changes)}</td>
+                    <td className="max-w-xs truncate px-4 py-3 text-md text-foreground-muted">{formatParams(h.changes)}</td>
                     <td className="px-4 py-3 text-foreground">{toTitleCase(h.action.replace(/\./g, " "))}</td>
                     <td className="px-4 py-3 text-foreground">{h.status_code}</td>
                   </tr>

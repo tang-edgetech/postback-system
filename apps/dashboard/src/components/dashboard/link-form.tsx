@@ -93,7 +93,7 @@ export function LinkForm() {
     <div id="page-links-create" className="c-link-form max-w-2xl">
       <div className="flex items-center gap-3">
         <IconButton id="link-form-back" icon={<ArrowLeftIcon />} label="Back" onClick={() => router.push("/links")} />
-        <h1 className="text-2xl font-semibold text-foreground">Create Link</h1>
+        <h1 className="text-[26px] leading-8 font-semibold text-foreground">Create Link</h1>
       </div>
 
       <form id="link-form" onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
@@ -125,7 +125,7 @@ export function LinkForm() {
         <Input id="link-merchant" label="Merchant" value={selectedMerchantName} disabled placeholder="Derived from selected Campaign" className="cursor-not-allowed" />
 
         <div className="c-field flex flex-col gap-1">
-          <label htmlFor="link-expires-at" className="c-field__label text-sm font-medium text-foreground">
+          <label htmlFor="link-expires-at" className="c-field__label text-md font-medium text-foreground">
             Expires At (Optional)
           </label>
           <input
@@ -135,11 +135,11 @@ export function LinkForm() {
             onChange={(e) => setExpiresAt(e.target.value)}
             className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
-          <p className="text-xs text-foreground-muted">Leave blank for a permanent link.</p>
+          <p className="text-md text-foreground-muted">Leave blank for a permanent link.</p>
         </div>
 
         <div className="c-field flex flex-col gap-1">
-          <label htmlFor="link-remarks" className="c-field__label text-sm font-medium text-foreground">
+          <label htmlFor="link-remarks" className="c-field__label text-md font-medium text-foreground">
             Remarks (Optional)
           </label>
           <textarea

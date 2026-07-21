@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
+import { IdleTimeoutModal } from "@/components/auth/idle-timeout-modal";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
@@ -13,6 +14,10 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
       router.replace("/login");
     }
   }, [status, router]);
+
+  if (status === "session_expired") {
+    return <IdleTimeoutModal />;
+  }
 
   if (status !== "authenticated") {
     return (

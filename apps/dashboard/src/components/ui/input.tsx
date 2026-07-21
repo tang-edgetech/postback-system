@@ -15,7 +15,7 @@ export function Input({ label, id, error, className = "", ...rest }: InputProps)
 
   return (
     <div className="c-field flex flex-col gap-1">
-      <label htmlFor={inputId} className="c-field__label text-sm font-medium text-foreground">
+      <label htmlFor={inputId} className="c-field__label text-md font-medium text-foreground">
         {toTitleCase(label)}
       </label>
       <input
@@ -26,7 +26,7 @@ export function Input({ label, id, error, className = "", ...rest }: InputProps)
         {...rest}
       />
       {error && (
-        <p id={`${inputId}-error`} className="c-field__error text-xs text-red-600">
+        <p id={`${inputId}-error`} className="c-field__error text-md text-red-600">
           {error}
         </p>
       )}

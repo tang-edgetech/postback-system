@@ -88,6 +88,55 @@ func ForRole(ctx context.Context, db *sql.DB, role models.Role) map[string]bool 
 	return result
 }
 
+// AllowedForUser layers a per-user override (user_permission_overrides) on top of the
+// role default — an override, if present, always wins; otherwise it falls back to
+// Allowed. Super Admin still always short-circuits true and is never overridable.
+func AllowedForUser(ctx context.Context, db *sql.DB, role models.Role, userID int64, key string) bool {
+	if role == models.RoleSuperAdmin {
+		return true
+	}
+	var allowed bool
+	err := db.QueryRowContext(ctx,
+		`SELECT allowed FROM user_permission_overrides WHERE user_id = ? AND permission_key = ?`, userID, key,
+	).Scan(&allowed)
+	if err == nil {
+		return allowed
+	}
+	return Allowed(ctx, db, role, key)
+}
+
+// ForUser is the per-user counterpart of ForRole, applying any overrides for userID.
+func ForUser(ctx context.Context, db *sql.DB, role models.Role, userID int64) map[string]bool {
+	result := make(map[string]bool, len(AllKeys))
+	for _, k := range AllKeys {
+		result[k] = AllowedForUser(ctx, db, role, userID, k)
+	}
+	return result
+}
+
+// OverridesForUser returns this user's raw override rows (key -> allowed), with no role
+// fallback — used to render the Edit User permissions matrix so it can distinguish
+// "inheriting the role default" from "explicitly overridden" instead of collapsing both
+// into the same boolean.
+func OverridesForUser(ctx context.Context, db *sql.DB, userID int64) (map[string]bool, error) {
+	rows, err := db.QueryContext(ctx, `SELECT permission_key, allowed FROM user_permission_overrides WHERE user_id = ?`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := map[string]bool{}
+	for rows.Next() {
+		var key string
+		var allowed bool
+		if err := rows.Scan(&key, &allowed); err != nil {
+			return nil, err
+		}
+		result[key] = allowed
+	}
+	return result, nil
+}
+
 // Matrix returns every role's allowed map for AllKeys, e.g. for the Settings >
 // Permissions editor. Super Admin is included as an always-true row for display.
 func Matrix(ctx context.Context, db *sql.DB) (map[string]map[string]bool, error) {

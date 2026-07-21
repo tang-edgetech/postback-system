@@ -13,6 +13,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { toTitleCase } from "@/lib/titlecase";
 import { UploadIcon } from "@/components/icons";
 import { permissions as PERMISSION_KEYS, ROLE_COLUMNS, formatPermissionKey } from "@/lib/permissions";
+import { EntityMultiSelect } from "@/components/dashboard/entity-multi-select";
 
 type SettingsData = {
   site_title: string;
@@ -28,12 +29,31 @@ type SettingsData = {
 
 type PermissionsMatrix = Record<string, Record<string, boolean>>;
 
+type AuthTypeSetting = { enabled_globally: boolean; link_ids: number[] };
+type AuthScope = "off" | "all" | "specific";
+type AuthTypeState = { scope: AuthScope; link_ids: number[] };
+const ADVANCED_AUTH_TYPES = [
+  { key: "hmac", label: "HMAC-Signed Requests" },
+  { key: "oauth2_client_credentials", label: "OAuth2 Client Credentials" },
+] as const;
+
+function toAuthTypeState(setting: AuthTypeSetting | undefined): AuthTypeState {
+  if (!setting) return { scope: "off", link_ids: [] };
+  if (setting.enabled_globally) return { scope: "all", link_ids: [] };
+  if (setting.link_ids.length > 0) return { scope: "specific", link_ids: setting.link_ids };
+  return { scope: "off", link_ids: [] };
+}
+
+function toAuthTypeSetting(state: AuthTypeState): AuthTypeSetting {
+  return { enabled_globally: state.scope === "all", link_ids: state.scope === "specific" ? state.link_ids : [] };
+}
+
 function getApiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 }
 
 const LANGUAGE_OPTIONS = [{ value: "EN", label: "English" }];
-const TABS = ["General", "SEO", "Permissions", "Cloudflare"] as const;
+const TABS = ["General", "SEO", "Permissions", "Authentication", "Cloudflare"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function SettingsPage() {
@@ -58,6 +78,9 @@ export default function SettingsPage() {
   const [matrix, setMatrix] = useState<PermissionsMatrix | null>(null);
   const [savingPermissions, setSavingPermissions] = useState(false);
 
+  const [authTypes, setAuthTypes] = useState<Record<string, AuthTypeState> | null>(null);
+  const [savingAuth, setSavingAuth] = useState(false);
+
   async function loadSettings() {
     try {
       const result = await api.get<SettingsData>("/v1/settings");
@@ -80,6 +103,10 @@ export default function SettingsPage() {
         await loadSettings();
         const permRes = await api.get<{ matrix: PermissionsMatrix }>("/v1/settings/permissions");
         setMatrix(permRes.matrix);
+        const authRes = await api.get<Record<string, AuthTypeSetting>>("/v1/settings/authentication");
+        setAuthTypes(
+          Object.fromEntries(ADVANCED_AUTH_TYPES.map(({ key }) => [key, toAuthTypeState(authRes[key])])),
+        );
       } finally {
         setLoading(false);
       }
@@ -90,7 +117,7 @@ export default function SettingsPage() {
   if (user?.role !== "super_admin") {
     return (
       <div id="page-settings" className="c-settings">
-        <h1 className="c-settings__title text-2xl font-semibold text-foreground">Settings</h1>
+        <h1 className="c-settings__title text-[26px] leading-8 font-semibold text-foreground">Settings</h1>
         <p className="mt-2 text-foreground-muted">This section is only available to Super Admins.</p>
       </div>
     );
@@ -200,9 +227,32 @@ export default function SettingsPage() {
     }
   }
 
+  function setAuthType(key: string, patch: Partial<AuthTypeState>) {
+    setAuthTypes((prev) => (prev ? { ...prev, [key]: { ...prev[key], ...patch } } : prev));
+  }
+
+  async function handleSaveAuthentication() {
+    if (!authTypes) return;
+    const confirmed = await confirm({
+      title: "Update Authentication Settings?",
+      message: "This changes which advanced auth types are available in Links > Forwarding.",
+    });
+    if (!confirmed) return;
+    setSavingAuth(true);
+    try {
+      const body = Object.fromEntries(Object.entries(authTypes).map(([key, state]) => [key, toAuthTypeSetting(state)]));
+      await api.patch("/v1/settings/authentication", body);
+      toast.success("Authentication settings updated successfully.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Something went wrong.");
+    } finally {
+      setSavingAuth(false);
+    }
+  }
+
   return (
     <div id="page-settings" className="c-settings max-w-3xl">
-      <h1 className="c-settings__title text-2xl font-semibold text-foreground">Settings</h1>
+      <h1 className="c-settings__title text-[26px] leading-8 font-semibold text-foreground">Settings</h1>
 
       <div id="settings-tabs" className="c-settings__tabs mt-4 flex gap-1 border-b border-border">
         {TABS.map((t) => (
@@ -231,12 +281,12 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="c-field flex flex-col gap-1">
-                  <span className="c-field__label text-sm font-medium text-foreground">Logo</span>
+                  <span className="c-field__label text-md font-medium text-foreground">Logo</span>
                   <div className="flex items-center gap-3">
                     {data?.logo_path ? (
                       <img src={`${getApiBaseUrl()}${data.logo_path}`} alt="Logo" className="h-10 w-auto rounded border border-border bg-white p-1" />
                     ) : (
-                      <span className="text-xs text-foreground-muted">No logo uploaded</span>
+                      <span className="text-md text-foreground-muted">No logo uploaded</span>
                     )}
                     <input
                       ref={logoInputRef}
@@ -255,12 +305,12 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="c-field flex flex-col gap-1">
-                  <span className="c-field__label text-sm font-medium text-foreground">Favicon</span>
+                  <span className="c-field__label text-md font-medium text-foreground">Favicon</span>
                   <div className="flex items-center gap-3">
                     {data?.favicon_path ? (
                       <img src={`${getApiBaseUrl()}${data.favicon_path}`} alt="Favicon" className="h-8 w-8 rounded border border-border bg-white p-1" />
                     ) : (
-                      <span className="text-xs text-foreground-muted">No favicon uploaded</span>
+                      <span className="text-md text-foreground-muted">No favicon uploaded</span>
                     )}
                     <input
                       ref={faviconInputRef}
@@ -373,11 +423,58 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {tab === "Authentication" && authTypes && (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-foreground-muted">
+                Advanced auth types for Links &gt; Forwarding are hidden by default. Turn one on for every Link, or just a specific allowlist.
+              </p>
+              {ADVANCED_AUTH_TYPES.map(({ key, label }) => {
+                const state = authTypes[key];
+                return (
+                  <div key={key} id={`auth-type-${key}`} className="rounded-lg border border-border bg-surface p-4">
+                    <h3 className="text-[16px] leading-5 font-semibold text-foreground">{label}</h3>
+                    <div className="mt-3 flex flex-wrap gap-4">
+                      {(["off", "all", "specific"] as const).map((scope) => (
+                        <label key={scope} className="flex items-center gap-2 text-sm text-foreground">
+                          <input
+                            type="radio"
+                            name={`auth-type-${key}-scope`}
+                            checked={state.scope === scope}
+                            onChange={() => setAuthType(key, { scope })}
+                            className="h-4 w-4"
+                          />
+                          {scope === "off" ? "Off" : scope === "all" ? "All Links" : "Specific Links"}
+                        </label>
+                      ))}
+                    </div>
+                    {state.scope === "specific" && (
+                      <div className="mt-3">
+                        <EntityMultiSelect
+                          id={`auth-type-${key}-links`}
+                          fetchPath="/v1/links"
+                          labelKey="slug"
+                          selected={state.link_ids}
+                          onChange={(link_ids) => setAuthType(key, { link_ids })}
+                          placeholder="Search links by slug…"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <div>
+                <Button id="settings-authentication-save" type="button" variant="primary" onClick={handleSaveAuthentication} disabled={savingAuth}>
+                  {savingAuth ? "saving" : "save changes"}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {tab === "Cloudflare" && (
             <div className="flex flex-col gap-4">
               <div className="rounded-lg border border-border bg-surface p-4">
                 <span
-                  className={`c-badge inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`c-badge inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${
                     data?.cloudflare_configured
                       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                       : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"

@@ -79,12 +79,12 @@ export function SetupWizard() {
   return (
     <div id="page-setup" className="c-setup flex min-h-screen items-center justify-center bg-background px-4">
       <div id="setup-card" className="c-setup__card w-full max-w-lg rounded-lg border border-border bg-surface p-8 shadow-sm">
-        <h1 id="setup-title" className="c-setup__title text-xl font-semibold text-foreground">
+        <h1 id="setup-title" className="c-setup__title text-[22px] leading-7 font-semibold text-foreground">
           Welcome — Let&apos;s Set Up Your System
         </h1>
         <p className="mt-1 text-sm text-foreground-muted">This runs once. You&apos;ll create the first Super Admin account and set a few basics.</p>
 
-        <div id="setup-steps" className="mt-6 flex items-center gap-2 text-xs text-foreground-muted">
+        <div id="setup-steps" className="mt-6 flex items-center gap-2 text-md text-foreground-muted">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <span
@@ -145,7 +145,7 @@ export function SetupWizard() {
                 <span className="text-foreground-muted">Super Admin:</span> {fullName} ({email})
               </p>
             </div>
-            <p className="text-xs text-foreground-muted">You can add a logo and favicon later in Settings → General.</p>
+            <p className="text-md text-foreground-muted">You can add a logo and favicon later in Settings → General.</p>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex gap-2">
               <Button id="setup-back-2" type="button" variant="ghost" onClick={() => setStep("Super Admin")} disabled={submitting}>

@@ -31,7 +31,7 @@ export function PasswordInput({ label, id, error, className = "", ...rest }: Pas
 
   return (
     <div className="c-field flex flex-col gap-1">
-      <label htmlFor={inputId} className="c-field__label text-sm font-medium text-foreground">
+      <label htmlFor={inputId} className="c-field__label text-md font-medium text-foreground">
         {toTitleCase(label)}
       </label>
       <div className="c-field__input-wrap relative">
@@ -55,7 +55,7 @@ export function PasswordInput({ label, id, error, className = "", ...rest }: Pas
         </button>
       </div>
       {error && (
-        <p id={`${inputId}-error`} className="c-field__error text-xs text-red-600">
+        <p id={`${inputId}-error`} className="c-field__error text-md text-red-600">
           {error}
         </p>
       )}

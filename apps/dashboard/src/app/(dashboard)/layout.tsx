@@ -22,7 +22,7 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div
           id="dashboard-shell-main"
-          className={`c-dashboard-shell__main flex flex-1 flex-col transition-[padding] duration-200 ${
+          className={`c-dashboard-shell__main flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ${
             sidebarOpen ? "min-[1200px]:pl-64" : "min-[1200px]:pl-0"
           }`}
         >
@@ -32,7 +32,7 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
           >
             <IconButton id="sidebar-toggle" icon={<MenuIcon />} label="Toggle Menu" onClick={() => setSidebarOpen((v) => !v)} />
           </header>
-          <main id="dashboard-content" className="c-dashboard-content flex-1 p-6">
+          <main id="dashboard-content" className="c-dashboard-content min-w-0 flex-1 p-6">
             {children}
           </main>
         </div>

@@ -34,7 +34,7 @@ export function IconButton({ icon, label, variant = "default", id, className = "
         {icon}
       </button>
       <span
-        className="c-icon-btn-tooltip pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-slate-50 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        className="c-icon-btn-tooltip pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-md text-slate-50 shadow-md group-hover:block group-focus-within:block"
         role="tooltip"
       >
         {title}

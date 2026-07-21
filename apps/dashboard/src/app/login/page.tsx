@@ -73,7 +73,7 @@ function LoginForm() {
           onSubmit={handleVerify}
           className="c-login__card w-full max-w-sm rounded-lg border border-border bg-surface p-8 shadow-sm"
         >
-          <h1 id="login-2fa-title" className="c-login__title text-xl font-semibold text-foreground">
+          <h1 id="login-2fa-title" className="c-login__title text-[22px] leading-7 font-semibold text-foreground">
             Verification Required
           </h1>
           <p className="c-login__subtitle mt-1 text-sm text-foreground-muted">Enter the 6-digit code from your authenticator app</p>
@@ -120,7 +120,7 @@ function LoginForm() {
         className="c-login__card w-full max-w-sm rounded-lg border border-border bg-surface p-8 shadow-sm"
       >
         {logoUrl && <img id="login-logo" src={logoUrl} alt={siteTitle} className="mb-3 h-10 w-auto" />}
-        <h1 id="login-title" className="c-login__title text-xl font-semibold text-foreground">
+        <h1 id="login-title" className="c-login__title text-[22px] leading-7 font-semibold text-foreground">
           {siteTitle}
         </h1>
         <p className="c-login__subtitle mt-1 text-sm text-foreground-muted">Sign in to your dashboard</p>

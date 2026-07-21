@@ -97,7 +97,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         <div id="sidebar-site-title" className="c-sidebar__title flex items-center gap-2 border-b border-border px-5 py-4">
           {faviconUrl && <img src={faviconUrl} alt="" className="h-8 w-8 rounded" />}
-          <span className="text-lg font-semibold text-foreground">{siteTitle}</span>
+          <span className="text-[20px] leading-7 font-semibold text-foreground">{siteTitle}</span>
         </div>
 
         <div id="sidebar-user" className="c-sidebar__user border-b border-border px-5 py-4">

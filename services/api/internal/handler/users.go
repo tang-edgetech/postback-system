@@ -14,6 +14,7 @@ import (
 	"postback-system/shared/httpresp"
 	"postback-system/shared/listquery"
 	"postback-system/shared/models"
+	"postback-system/shared/permissions"
 	"postback-system/shared/session"
 )
 
@@ -368,6 +369,250 @@ func (h *UsersHandler) BulkStatus(w http.ResponseWriter, r *http.Request) {
 	audit.Log(r.Context(), h.DB, actor.UserID, actor.Email, actor.FullName, "user.bulk_status_change", http.StatusOK, "user", 0, nil,
 		map[string]any{"ids": allowedIDs, "status": req.Status}, r.RemoteAddr, r.UserAgent())
 	httpresp.JSON(w, http.StatusOK, map[string]any{"status": "updated", "count": len(allowedIDs)})
+}
+
+type resetPasswordRequest struct {
+	NewPassword string `json:"new_password"`
+}
+
+// ResetPassword lets Super Admin/Admin directly set a target user's password — no
+// current password, no repeat field. This is distinct from ProfileHandler.ChangePassword
+// (self-service, requires the current password): here the actor is resetting someone
+// else's password on their behalf, so that check doesn't apply, only the usual
+// actor/target mutation restriction does.
+func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	actor := middleware.SessionFromContext(r.Context())
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid user id")
+		return
+	}
+
+	target, err := h.targetRole(r, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	if !canActorMutateTarget(actor, target.Role, target.CreatedBy) {
+		httpresp.JSONError(w, http.StatusForbidden, "forbidden", "You do not have permission to reset this user's password")
+		return
+	}
+
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid request body")
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "New password must be at least 8 characters")
+		return
+	}
+
+	hash, err := crypto.HashPassword(req.NewPassword)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not process new password")
+		return
+	}
+	if _, err := h.DB.ExecContext(r.Context(), `UPDATE users SET password_hash = ? WHERE id = ?`, hash, id); err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update password")
+		return
+	}
+
+	audit.Log(r.Context(), h.DB, actor.UserID, actor.Email, actor.FullName, "user.password_reset", http.StatusOK, "user", id, nil, nil, r.RemoteAddr, r.UserAgent())
+	httpresp.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+// GetPermissionOverrides returns the target user's role defaults alongside any explicit
+// per-user overrides, so the Edit User page can render "inherit (role says X)" vs.
+// "explicitly overridden" instead of a single collapsed boolean.
+func (h *UsersHandler) GetPermissionOverrides(w http.ResponseWriter, r *http.Request) {
+	actor := middleware.SessionFromContext(r.Context())
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid user id")
+		return
+	}
+
+	target, err := h.targetRole(r, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	if !canActorMutateTarget(actor, target.Role, target.CreatedBy) {
+		httpresp.JSONError(w, http.StatusForbidden, "forbidden", "You do not have permission to view this user's permissions")
+		return
+	}
+
+	overrides, err := permissions.OverridesForUser(r.Context(), h.DB, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not load permission overrides")
+		return
+	}
+	httpresp.JSON(w, http.StatusOK, map[string]any{
+		"keys":          permissions.AllKeys,
+		"role_defaults": permissions.ForRole(r.Context(), h.DB, target.Role),
+		"overrides":     overrides,
+	})
+}
+
+type updatePermissionOverridesRequest struct {
+	// nil clears the override (falls back to the role default); non-nil sets it explicitly.
+	Overrides map[string]*bool `json:"overrides"`
+}
+
+func (h *UsersHandler) UpdatePermissionOverrides(w http.ResponseWriter, r *http.Request) {
+	actor := middleware.SessionFromContext(r.Context())
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid user id")
+		return
+	}
+
+	target, err := h.targetRole(r, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	if !canActorMutateTarget(actor, target.Role, target.CreatedBy) {
+		httpresp.JSONError(w, http.StatusForbidden, "forbidden", "You do not have permission to modify this user's permissions")
+		return
+	}
+
+	var req updatePermissionOverridesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid request body")
+		return
+	}
+
+	for key, val := range req.Overrides {
+		if !permissions.IsValidKey(key) {
+			continue
+		}
+		if val == nil {
+			if _, err := h.DB.ExecContext(r.Context(), `DELETE FROM user_permission_overrides WHERE user_id = ? AND permission_key = ?`, id, key); err != nil {
+				httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update permission overrides")
+				return
+			}
+			continue
+		}
+		if _, err := h.DB.ExecContext(r.Context(),
+			`INSERT INTO user_permission_overrides (user_id, permission_key, allowed) VALUES (?, ?, ?)
+			 ON DUPLICATE KEY UPDATE allowed = ?`,
+			id, key, *val, *val,
+		); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update permission overrides")
+			return
+		}
+	}
+
+	audit.Log(r.Context(), h.DB, actor.UserID, actor.Email, actor.FullName, "user.permission_override.update", http.StatusOK, "user", id, nil, req, r.RemoteAddr, r.UserAgent())
+	httpresp.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+// GetEntityGrants returns which Merchants/Campaigns this user has been explicitly
+// granted Reports visibility into, beyond whatever they created themselves.
+func (h *UsersHandler) GetEntityGrants(w http.ResponseWriter, r *http.Request) {
+	actor := middleware.SessionFromContext(r.Context())
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid user id")
+		return
+	}
+
+	target, err := h.targetRole(r, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	if !canActorMutateTarget(actor, target.Role, target.CreatedBy) {
+		httpresp.JSONError(w, http.StatusForbidden, "forbidden", "You do not have permission to view this user's access grants")
+		return
+	}
+
+	rows, err := h.DB.QueryContext(r.Context(), `SELECT entity_type, entity_id FROM user_entity_grants WHERE user_id = ?`, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not load access grants")
+		return
+	}
+	defer rows.Close()
+
+	tenantIDs := []int64{}
+	campaignIDs := []int64{}
+	for rows.Next() {
+		var entityType string
+		var entityID int64
+		if err := rows.Scan(&entityType, &entityID); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not read access grants")
+			return
+		}
+		if entityType == "tenant" {
+			tenantIDs = append(tenantIDs, entityID)
+		} else {
+			campaignIDs = append(campaignIDs, entityID)
+		}
+	}
+	httpresp.JSON(w, http.StatusOK, map[string]any{"tenant_ids": tenantIDs, "campaign_ids": campaignIDs})
+}
+
+type updateEntityGrantsRequest struct {
+	TenantIDs   []int64 `json:"tenant_ids"`
+	CampaignIDs []int64 `json:"campaign_ids"`
+}
+
+func (h *UsersHandler) UpdateEntityGrants(w http.ResponseWriter, r *http.Request) {
+	actor := middleware.SessionFromContext(r.Context())
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid user id")
+		return
+	}
+
+	target, err := h.targetRole(r, id)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	if !canActorMutateTarget(actor, target.Role, target.CreatedBy) {
+		httpresp.JSONError(w, http.StatusForbidden, "forbidden", "You do not have permission to modify this user's access grants")
+		return
+	}
+
+	var req updateEntityGrantsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid request body")
+		return
+	}
+
+	tx, err := h.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update access grants")
+		return
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(r.Context(), `DELETE FROM user_entity_grants WHERE user_id = ?`, id); err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update access grants")
+		return
+	}
+	for _, tid := range req.TenantIDs {
+		if _, err := tx.ExecContext(r.Context(), `INSERT INTO user_entity_grants (user_id, entity_type, entity_id) VALUES (?, 'tenant', ?)`, id, tid); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update access grants")
+			return
+		}
+	}
+	for _, cid := range req.CampaignIDs {
+		if _, err := tx.ExecContext(r.Context(), `INSERT INTO user_entity_grants (user_id, entity_type, entity_id) VALUES (?, 'campaign', ?)`, id, cid); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update access grants")
+			return
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update access grants")
+		return
+	}
+
+	audit.Log(r.Context(), h.DB, actor.UserID, actor.Email, actor.FullName, "user.entity_grant.update", http.StatusOK, "user", id, nil, req, r.RemoteAddr, r.UserAgent())
+	httpresp.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func (h *UsersHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {

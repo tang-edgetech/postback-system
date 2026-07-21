@@ -118,6 +118,10 @@ export function useListQuery<T extends { id: number }>(basePath: string, initial
     setFilter,
     setSearch: updateSearch,
     clearSelection: () => setSelected(new Set()),
+    // Exposed so pages that need "select all" to exclude certain rows (e.g. the actor's
+    // own row on the Users page) can compose their own toggle instead of the generic
+    // "every item on the page" behavior of toggleSelectAll.
+    setSelected,
     refetch: load,
   };
 }

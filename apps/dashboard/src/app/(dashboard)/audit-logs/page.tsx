@@ -45,7 +45,7 @@ export default function AuditLogsPage() {
   return (
     <div id="page-audit-logs" className="c-audit-logs">
       <div className="flex items-center justify-between">
-        <h1 className="c-audit-logs__title text-2xl font-semibold text-foreground">Audit Logs</h1>
+        <h1 className="c-audit-logs__title text-[26px] leading-8 font-semibold text-foreground">Audit Logs</h1>
         <Button id="audit-logs-export" variant="secondary" onClick={handleExport}>
           export csv
         </Button>
@@ -62,7 +62,7 @@ export default function AuditLogsPage() {
           options={actionOptions}
         />
         <div className="c-field flex flex-col gap-1">
-          <label htmlFor="audit-logs-date-from" className="c-field__label text-sm font-medium text-foreground">
+          <label htmlFor="audit-logs-date-from" className="c-field__label text-md font-medium text-foreground">
             From Date
           </label>
           <input
@@ -74,7 +74,7 @@ export default function AuditLogsPage() {
           />
         </div>
         <div className="c-field flex flex-col gap-1">
-          <label htmlFor="audit-logs-date-to" className="c-field__label text-sm font-medium text-foreground">
+          <label htmlFor="audit-logs-date-to" className="c-field__label text-md font-medium text-foreground">
             To Date
           </label>
           <input
@@ -118,13 +118,13 @@ export default function AuditLogsPage() {
                 <td className="px-4 py-3 whitespace-nowrap text-foreground-muted">{new Date(log.created_at).toLocaleString()}</td>
                 <td className="px-4 py-3 text-foreground">
                   {log.actor_full_name || "System"}
-                  {log.actor_email && <span className="ml-1 text-xs text-foreground-muted">({log.actor_email})</span>}
+                  {log.actor_email && <span className="ml-1 text-md text-foreground-muted">({log.actor_email})</span>}
                 </td>
                 <td className="px-4 py-3 text-foreground">{toTitleCase(log.action.replace(/\./g, " "))}</td>
-                <td className="max-w-md px-4 py-3 text-xs text-foreground-muted">{formatChanges(log.changes)}</td>
+                <td className="max-w-md px-4 py-3 text-md text-foreground-muted">{formatChanges(log.changes)}</td>
                 <td className="px-4 py-3">
                   <span
-                    className={`c-badge inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    className={`c-badge inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${
                       log.status_code < 400
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                         : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"

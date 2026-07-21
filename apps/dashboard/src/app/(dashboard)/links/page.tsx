@@ -151,7 +151,7 @@ export default function LinksPage() {
   return (
     <div id="page-links" className="c-links">
       <div className="flex items-center justify-between">
-        <h1 className="c-links__title text-2xl font-semibold text-foreground">Links</h1>
+        <h1 className="c-links__title text-[26px] leading-8 font-semibold text-foreground">Links</h1>
         {canCreate && (
           <Button id="links-create-btn" variant="primary" onClick={() => router.push("/links/create")}>
             create link
@@ -258,7 +258,7 @@ export default function LinksPage() {
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
                       <span
-                        className={`c-badge inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${
+                        className={`c-badge inline-flex w-fit rounded-full px-2 py-0.5 text-sm font-medium ${
                           link.status === "active"
                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                             : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
@@ -266,7 +266,7 @@ export default function LinksPage() {
                       >
                         {toTitleCase(link.status)}
                       </span>
-                      <span className={`c-badge inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${expiry.className}`}>{expiry.label}</span>
+                      <span className={`c-badge inline-flex w-fit rounded-full px-2 py-0.5 text-sm font-medium ${expiry.className}`}>{expiry.label}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">

@@ -66,6 +66,15 @@ export default function UsersPage() {
     return false;
   }
 
+  // "Select all" must only ever select rows whose individual checkbox isn't disabled —
+  // otherwise it would silently select the actor's own row (or other non-mutable rows)
+  // even though clicking that row's checkbox directly is blocked.
+  const selectableIds = list.items.filter((u) => canMutate(u) && u.id !== actor?.id).map((u) => u.id);
+  const allSelectableSelected = selectableIds.length > 0 && selectableIds.every((id) => list.selected.has(id));
+  function handleToggleSelectAll() {
+    list.setSelected(allSelectableSelected ? new Set() : new Set(selectableIds));
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCreateError(null);
@@ -159,7 +168,7 @@ export default function UsersPage() {
   return (
     <div id="page-users" className="c-users">
       <div className="flex items-center justify-between">
-        <h1 className="c-users__title text-2xl font-semibold text-foreground">Users</h1>
+        <h1 className="c-users__title text-[26px] leading-8 font-semibold text-foreground">Users</h1>
         <Button id="users-add-toggle" variant="primary" onClick={() => setShowCreate((v) => !v)}>
           {showCreate ? "cancel" : "add user"}
         </Button>
@@ -213,7 +222,7 @@ export default function UsersPage() {
           <thead className="bg-surface-alt text-foreground-muted">
             <tr>
               <th className="w-10 px-4 py-3">
-                <input id="users-select-all" type="checkbox" checked={list.items.length > 0 && list.selected.size === list.items.length} onChange={list.toggleSelectAll} />
+                <input id="users-select-all" type="checkbox" checked={allSelectableSelected} onChange={handleToggleSelectAll} />
               </th>
               <SortableTh column="full_name" label="Full Name" sort={list.sort} dir={list.dir} onSort={list.toggleSort} />
               <SortableTh column="email" label="Email" sort={list.sort} dir={list.dir} onSort={list.toggleSort} />
@@ -241,7 +250,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3 text-foreground">{toTitleCase(u.role)}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`c-badge inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`c-badge inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${
                         u.status === "active"
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                           : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
@@ -264,7 +273,7 @@ export default function UsersPage() {
                           <IconButton id={`user-delete-${u.id}`} icon={<TrashIcon />} label="Delete" variant="danger" onClick={() => handleDelete(u)} />
                         </>
                       )}
-                      {u.id === actor?.id && <span className="self-center text-xs text-foreground-muted">(You)</span>}
+                      {u.id === actor?.id && <span className="self-center text-md text-foreground-muted">(You)</span>}
                     </div>
                   </td>
                 </tr>

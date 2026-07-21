@@ -50,8 +50,17 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  /* Tailwind has no built-in "md" step (xs, sm, base, lg, ...) — this matches the body
+     default (16px / 24px) so most text-xs call sites can size up to it explicitly. */
+  --text-md: 1rem;
+  --text-md--line-height: 1.5rem;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5rem;
 }

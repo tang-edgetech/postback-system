@@ -141,7 +141,7 @@ func (h *AuthHandler) completeLogin(w http.ResponseWriter, r *http.Request, user
 
 	audit.Log(r.Context(), h.DB, user.ID, user.Email, user.FullName, "auth.login", http.StatusOK, "user", user.ID, nil, nil, r.RemoteAddr, r.UserAgent())
 	payload := userPayload(user.ID, user.FullName, user.Email, user.Role, user.Theme)
-	payload["permissions"] = permissions.ForRole(r.Context(), h.DB, user.Role)
+	payload["permissions"] = permissions.ForUser(r.Context(), h.DB, user.Role, user.ID)
 	httpresp.JSON(w, http.StatusOK, payload)
 }
 
@@ -230,7 +230,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	payload := userPayload(data.UserID, data.FullName, data.Email, data.Role, data.Theme)
 	payload["authenticated"] = true
-	payload["permissions"] = permissions.ForRole(r.Context(), h.DB, data.Role)
+	payload["permissions"] = permissions.ForUser(r.Context(), h.DB, data.Role, data.UserID)
 	httpresp.JSON(w, http.StatusOK, payload)
 }
 

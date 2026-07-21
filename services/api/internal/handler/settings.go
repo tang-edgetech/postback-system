@@ -203,6 +203,124 @@ func (h *SettingsHandler) UpdateCloudflare(w http.ResponseWriter, r *http.Reques
 	httpresp.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+var advancedAuthTypes = []string{"hmac", "oauth2_client_credentials"}
+
+func isAdvancedAuthType(t string) bool {
+	for _, v := range advancedAuthTypes {
+		if v == t {
+			return true
+		}
+	}
+	return false
+}
+
+type authTypeSetting struct {
+	EnabledGlobally bool    `json:"enabled_globally"`
+	LinkIDs         []int64 `json:"link_ids"`
+}
+
+// GetAuthentication backs the Settings > Authentication tab — the advanced Forwarding
+// auth types (HMAC-signed requests, OAuth2 client-credentials) are hidden by default;
+// this is where Super Admin turns them on, either for every Link or a specific allowlist.
+func (h *SettingsHandler) GetAuthentication(w http.ResponseWriter, r *http.Request) {
+	result := map[string]authTypeSetting{}
+	for _, t := range advancedAuthTypes {
+		result[t] = authTypeSetting{LinkIDs: []int64{}}
+	}
+
+	rows, err := h.DB.QueryContext(r.Context(), `SELECT auth_type, enabled_globally FROM advanced_auth_settings`)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not load authentication settings")
+		return
+	}
+	for rows.Next() {
+		var authType string
+		var enabled bool
+		if err := rows.Scan(&authType, &enabled); err != nil {
+			rows.Close()
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not read authentication settings")
+			return
+		}
+		if setting, ok := result[authType]; ok {
+			setting.EnabledGlobally = enabled
+			result[authType] = setting
+		}
+	}
+	rows.Close()
+
+	scopeRows, err := h.DB.QueryContext(r.Context(), `SELECT auth_type, link_id FROM advanced_auth_link_scope`)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not load authentication link scope")
+		return
+	}
+	defer scopeRows.Close()
+	for scopeRows.Next() {
+		var authType string
+		var linkID int64
+		if err := scopeRows.Scan(&authType, &linkID); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not read authentication link scope")
+			return
+		}
+		if setting, ok := result[authType]; ok {
+			setting.LinkIDs = append(setting.LinkIDs, linkID)
+			result[authType] = setting
+		}
+	}
+
+	httpresp.JSON(w, http.StatusOK, result)
+}
+
+type updateAuthenticationRequest map[string]authTypeSetting
+
+func (h *SettingsHandler) UpdateAuthentication(w http.ResponseWriter, r *http.Request) {
+	actor := middleware.SessionFromContext(r.Context())
+
+	var req updateAuthenticationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", "Invalid request body")
+		return
+	}
+
+	tx, err := h.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update authentication settings")
+		return
+	}
+	defer tx.Rollback()
+
+	for authType, setting := range req {
+		if !isAdvancedAuthType(authType) {
+			continue
+		}
+		if _, err := tx.ExecContext(r.Context(),
+			`UPDATE advanced_auth_settings SET enabled_globally = ? WHERE auth_type = ?`, setting.EnabledGlobally, authType,
+		); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update authentication settings")
+			return
+		}
+		if _, err := tx.ExecContext(r.Context(), `DELETE FROM advanced_auth_link_scope WHERE auth_type = ?`, authType); err != nil {
+			httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update authentication link scope")
+			return
+		}
+		for _, linkID := range setting.LinkIDs {
+			if _, err := tx.ExecContext(r.Context(),
+				`INSERT INTO advanced_auth_link_scope (auth_type, link_id) VALUES (?, ?)`, authType, linkID,
+			); err != nil {
+				httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update authentication link scope")
+				return
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update authentication settings")
+		return
+	}
+
+	audit.Log(r.Context(), h.DB, actor.UserID, actor.Email, actor.FullName, "settings.update_authentication", http.StatusOK, "settings", 1, nil, req, r.RemoteAddr, r.UserAgent())
+	httpresp.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
 func (h *SettingsHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 	actor := middleware.SessionFromContext(r.Context())
 

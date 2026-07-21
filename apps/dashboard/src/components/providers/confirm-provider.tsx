@@ -67,7 +67,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             className="c-modal c-modal--confirm w-full max-w-sm rounded-lg bg-surface p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="confirm-modal-title" className="c-modal__title text-lg font-semibold text-foreground">
+            <h2 id="confirm-modal-title" className="c-modal__title text-[20px] leading-7 font-semibold text-foreground">
               {pending.title}
             </h2>
             {pending.message && (

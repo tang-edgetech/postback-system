@@ -32,7 +32,7 @@ export function CopyButton({ value, id }: { value: string; id: string }) {
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-slate-50 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100"
+        className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-md text-slate-50 shadow-md group-hover:block"
       >
         {label}
       </span>

@@ -164,7 +164,7 @@ export function CampaignManager() {
 
   return (
     <div id="page-campaigns" className="c-entity-manager">
-      <h1 className="c-entity-manager__title text-2xl font-semibold text-foreground">Campaigns</h1>
+      <h1 className="c-entity-manager__title text-[26px] leading-8 font-semibold text-foreground">Campaigns</h1>
 
       {canCreate && (
         <form onSubmit={handleCreate} className="c-entity-manager__create mt-4 flex flex-wrap items-end gap-3">
@@ -292,7 +292,7 @@ export function CampaignManager() {
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`c-badge inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    className={`c-badge inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${
                       item.status === "active"
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                         : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400"

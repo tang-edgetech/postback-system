@@ -25,9 +25,9 @@ All three domains are `127.0.0.1` in the hosts file locally, fronted by Apache v
 
 Fixed roles: `super_admin`, `admin`, `marketer`. Super Admin always has every permission — it is never stored in `role_permissions`, `permissions.Allowed` short-circuits true for it.
 
-Everything else is driven by the **Settings → Permissions** editor (`role_permissions` table, keys in `shared/permissions/permissions.go`), enforced server-side via `middleware.RequirePermission`. Seed defaults (migration 0004):
+Everything else is driven by the **Settings → Permissions** editor (`role_permissions` table, keys in `shared/permissions/permissions.go`), enforced server-side via `middleware.RequirePermission`. Seed defaults (migration 0004, links.status/links.delete for Marketer flipped off by migration 0007):
 - Admin: full access to everything except other Admins/Super Admins (Users routes additionally hard-restrict Admin to Marketers **it created** — see `canActorMutateTarget` in `services/api/internal/handler/users.go`).
-- Marketer: can create+edit Merchants/Campaigns/Links but not status-change/delete Merchants or Campaigns (Links status/delete are on by default, same as before this system existed).
+- Marketer: can create+edit Merchants/Campaigns/Links but not status-change/delete any of the three (Merchants, Campaigns, or Links — Links used to be on by default, matching pre-RBAC legacy behavior, but that's since been reversed).
 
 Frontend gets its own effective permission map inline on `/v1/auth/login` and `/v1/auth/me` (`user.permissions`, a flat `{ "merchants.create": true, ... }` map) — this is how page components decide which buttons to render. Marketer/Admin `GET /v1/settings/permissions` (the full editable matrix) is Super-Admin-only.
 

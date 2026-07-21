@@ -66,7 +66,7 @@ export default function ProfilePage() {
 
   return (
     <div id="page-profile" className="c-profile">
-      <h1 className="c-profile__title text-2xl font-semibold text-foreground">Profile</h1>
+      <h1 className="c-profile__title text-[26px] leading-8 font-semibold text-foreground">Profile</h1>
 
       <div className="c-profile__grid mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <form
@@ -74,7 +74,7 @@ export default function ProfilePage() {
           onSubmit={handleSaveName}
           className="c-profile__name flex flex-col gap-4 rounded-lg border border-border bg-surface p-4"
         >
-          <h2 className="text-lg font-semibold text-foreground">Personal Information</h2>
+          <h2 className="text-[20px] leading-7 font-semibold text-foreground">Personal Information</h2>
           <Input id="profile-fullname" label="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
           <Input id="profile-email" label="Email" value={user?.email ?? ""} disabled className="cursor-not-allowed" />
           <Input id="profile-role" label="Role" value={toTitleCase(user?.role ?? "")} disabled className="cursor-not-allowed" />
@@ -90,7 +90,7 @@ export default function ProfilePage() {
           onSubmit={handleChangePassword}
           className="c-profile__password flex flex-col gap-4 rounded-lg border border-border bg-surface p-4"
         >
-          <h2 className="text-lg font-semibold text-foreground">Change Password</h2>
+          <h2 className="text-[20px] leading-7 font-semibold text-foreground">Change Password</h2>
           <PasswordInput
             id="profile-current-password"
             label="Current Password"

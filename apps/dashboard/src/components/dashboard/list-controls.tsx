@@ -167,7 +167,7 @@ export function MultiSelectFilter({
         className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       >
         {toTitleCase(label)}
-        {selected.length > 0 && <span className="rounded-full bg-accent px-1.5 text-xs text-accent-foreground">{selected.length}</span>}
+        {selected.length > 0 && <span className="rounded-full bg-accent px-1.5 text-md text-accent-foreground">{selected.length}</span>}
         <CaretDownIcon className={`text-foreground-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (

@@ -70,7 +70,7 @@ func RequirePermission(db *sql.DB, key string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			data := SessionFromContext(r.Context())
-			if data == nil || !permissions.Allowed(r.Context(), db, data.Role, key) {
+			if data == nil || !permissions.AllowedForUser(r.Context(), db, data.Role, data.UserID, key) {
 				httpresp.JSONError(w, http.StatusForbidden, "forbidden", "You do not have permission to perform this action")
 				return
 			}

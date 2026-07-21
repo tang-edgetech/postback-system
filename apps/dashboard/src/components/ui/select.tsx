@@ -17,7 +17,7 @@ export function Select({ label, id, options, className = "", ...rest }: SelectPr
 
   return (
     <div className="c-field flex flex-col gap-1">
-      <label htmlFor={selectId} className="c-field__label text-sm font-medium text-foreground">
+      <label htmlFor={selectId} className="c-field__label text-md font-medium text-foreground">
         {toTitleCase(label)}
       </label>
       <select

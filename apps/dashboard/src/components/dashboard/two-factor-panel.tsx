@@ -112,7 +112,7 @@ export function TwoFactorPanel() {
 
   return (
     <div id="profile-2fa" className="c-profile__2fa mt-6 flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
-      <h2 className="text-lg font-semibold text-foreground">Two-Factor Authentication</h2>
+      <h2 className="text-[20px] leading-7 font-semibold text-foreground">Two-Factor Authentication</h2>
 
       {!status?.enabled && !enrolling && (
         <div className="flex flex-col gap-3">
@@ -133,7 +133,7 @@ export function TwoFactorPanel() {
           <p className="text-sm text-foreground-muted">Scan this QR code with your authenticator app, then enter the 6-digit code it shows.</p>
           <img id="profile-2fa-qr" src={qrCode} alt="2FA QR Code" className="h-48 w-48 rounded-md border border-border bg-white p-2" />
           {secret && (
-            <p className="text-xs text-foreground-muted">
+            <p className="text-md text-foreground-muted">
               Can&apos;t scan it? Enter this key manually: <span className="font-mono">{secret}</span>
             </p>
           )}
