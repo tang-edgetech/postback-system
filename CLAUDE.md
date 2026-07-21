@@ -7,8 +7,9 @@ Link-tracking / attribution platform. Three surfaces: public redirect front door
 ```
 services/redirect/   — babawha.local, hot-path 302 redirect + click logging (port 8081)
 services/api/        — babapi.babawha.local, dashboard REST API (port 8082)
+services/worker/      — no HTTP surface; runs the once-daily Links > Forwarding sweep (shared/forwarding.RunDailySweep) in an in-process loop, started via `go run ./services/worker/cmd/worker`
 apps/dashboard/       — backdash.babawha.local, Next.js admin UI (port 8083)
-shared/               — common Go module: db, redisclient, models, session, crypto, permissions, geoip, clientip, totp, idgen, uaparse, audit, httpresp, listquery
+shared/               — common Go module: db, redisclient, models, session, crypto, permissions, geoip, clientip, totp, idgen, uaparse, audit, httpresp, listquery, forwarding
 migrations/           — hand-applied .sql files (no migration tool wired up — apply with the mysql CLI directly)
 ```
 
@@ -25,9 +26,11 @@ All three domains are `127.0.0.1` in the hosts file locally, fronted by Apache v
 
 Fixed roles: `super_admin`, `admin`, `marketer`. Super Admin always has every permission — it is never stored in `role_permissions`, `permissions.Allowed` short-circuits true for it.
 
-Everything else is driven by the **Settings → Permissions** editor (`role_permissions` table, keys in `shared/permissions/permissions.go`), enforced server-side via `middleware.RequirePermission`. Seed defaults (migration 0004, links.status/links.delete for Marketer flipped off by migration 0007):
+Everything else is driven by the **Settings → Permissions** editor (`role_permissions` table, keys in `shared/permissions/permissions.go`), enforced server-side via `middleware.RequirePermission`. Seed defaults (migration 0004, links.status/links.delete for Marketer flipped off by migration 0007; links.forwarding/reports.view added by migrations 0008/0009, both Admin-on/Marketer-off by default):
 - Admin: full access to everything except other Admins/Super Admins (Users routes additionally hard-restrict Admin to Marketers **it created** — see `canActorMutateTarget` in `services/api/internal/handler/users.go`).
 - Marketer: can create+edit Merchants/Campaigns/Links but not status-change/delete any of the three (Merchants, Campaigns, or Links — Links used to be on by default, matching pre-RBAC legacy behavior, but that's since been reversed).
+
+Reports (`reports.view`) has an extra scoping layer beyond the on/off permission check: a Marketer who has been granted access only sees campaigns it created or has been explicitly granted via `user_entity_grants` (migration 0006) — resolved by `visibleCampaignIDs` in `services/api/internal/handler/reports.go`. This is unique to Reports; the Links/Campaigns/Merchants lists themselves show every entity to every authenticated user regardless of role.
 
 Frontend gets its own effective permission map inline on `/v1/auth/login` and `/v1/auth/me` (`user.permissions`, a flat `{ "merchants.create": true, ... }` map) — this is how page components decide which buttons to render. Marketer/Admin `GET /v1/settings/permissions` (the full editable matrix) is Super-Admin-only.
 
@@ -59,11 +62,26 @@ First run is gated purely on `SELECT COUNT(*) FROM users` (`services/api/interna
 
 Logo/favicon are direct upload-and-replace (`/v1/settings/logo`, `/v1/settings/favicon`, files under `services/api`'s `UPLOAD_DIR`, served back at `/uploads/...`) — no browsable media library. `GET /v1/settings/public` (no auth) exposes just site_title/logo/favicon/discourage_indexing for the Login page and sidebar to brand themselves before/without a session.
 
+## Links > Forwarding
+
+Per-link config (`link_forwarding_configs`, one row per link) forwards that link's unsent clicks ("leads") and postbacks ("actions") to a third-party endpoint. The sending mechanics live in `shared/forwarding` (not the API handler) specifically so `services/api`'s "Send Now" button and `services/worker`'s once-daily sweep can never drift apart — both just call `forwarding.RunForLink`. Key points:
+- Leads and actions share **one** oldest-first queue per link, capped per run (10/25/50/100/150/200) — not one cap each.
+- POST+JSON batches the whole capped set into a single call; every other Method/Body-Format combination sends one call per record, since GET/url-encoded can't serialize an array.
+- "Unsent" means no `link_forwarding_deliveries` row with `status='sent'` for that record — failed attempts are retried on the next run rather than dropped, tracked via the same table's `attempts`/`last_error` columns.
+- `forwarding.ValidateEndpoint` (SSRF guard) rejects private/loopback/link-local resolution both when a config is saved and again immediately before every send (defends against DNS rebinding between the two checks).
+- `services/worker` is its own binary specifically so a slow/broken destination endpoint can never affect the redirect hot path or the dashboard API — start it with `go run ./services/worker/cmd/worker` (add `FORWARDING_RUN_ON_START=true` to also run an immediate sweep on boot, useful for local testing instead of waiting for local midnight).
+- HMAC-signed and OAuth2 client-credentials auth are still **not** implemented, even though Settings → Authentication already has the global-toggle + per-link-allowlist infra for unlocking them (migration 0006) — that infra was built ahead of the actual signing/token-fetch logic, which is real follow-up work, not just two more `<Select>` options.
+
+## Reports
+
+`GET /v1/reports` aggregates on the fly straight from `link_clicks`/`postback_events` — no rollup table yet. Marketer visibility is scoped to campaigns it created or has been explicitly granted (`user_entity_grants`, migration 0006) via `visibleCampaignIDs` in `services/api/internal/handler/reports.go`; Admin/Super Admin see everything. Date-range boundaries are computed in the site's configured `region` offset (`settings.region`, a fixed `GMT±N` string — plain hour arithmetic in Go, deliberately not MySQL `CONVERT_TZ`, which needs the named-timezone tables populated and isn't guaranteed on a fresh MariaDB install). Charts are `recharts` (added specifically for this feature — the only charting dependency in the dashboard).
+
 ## Known gaps / deliberately out of scope so far
 
-- Fraud detection (velocity limits, bot-UA/datacenter-IP lists) not implemented — redirect hot path has no fraud checks yet.
+- Fraud detection (velocity limits, bot-UA/datacenter-IP lists) not implemented — redirect hot path has no fraud checks yet. Reports has no fraud-rejected/expired-postback-rejected metrics for the same reason.
 - Redirect click-logging is a synchronous per-request insert, not the batched/Redis-Stream durability tier discussed for high volume — fine at current scale, revisit before a real traffic push.
 - No "disable 2FA" self-service action once enrolled (can manage trusted devices, can't turn 2FA off from the UI).
+- DB archival/retention (partition-by-month + partition-drop) is designed (see `to-do.md`) but not built — Reports' longer date-range presets (quarter/semiannual/annual) still read raw tables directly, which will need to change once archival ships.
 
 ## UI conventions learned the hard way
 

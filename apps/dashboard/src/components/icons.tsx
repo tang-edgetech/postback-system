@@ -60,6 +60,13 @@ export const AuditLogsIcon = ({ className = "" }: IconProps) => (
   </svg>
 );
 
+export const ReportsIcon = ({ className = "" }: IconProps) => (
+  <svg className={`${base} ${className}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 3v18h18" />
+    <path d="M18 17V9M13 17V5M8 17v-4" />
+  </svg>
+);
+
 export const SettingsIcon = ({ className = "" }: IconProps) => (
   <svg className={`${base} ${className}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="3" />
@@ -168,6 +175,12 @@ export const UploadIcon = ({ className = "" }: IconProps) => (
   <svg className={`${base} ${className}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M12 16V4M7 9l5-5 5 5" />
     <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+  </svg>
+);
+
+export const FilterIcon = ({ className = "" }: IconProps) => (
+  <svg className={`${base} ${className}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 5h16M7 12h10M10 19h4" strokeLinecap="round" />
   </svg>
 );
 

@@ -87,6 +87,14 @@ export function useListQuery<T extends { id: number }>(basePath: string, initial
     setPage(1);
   }
 
+  // Resets back to the caller's fixed baseline (e.g. entity_type/entity_id scoping a
+  // sub-list) rather than wiping every key — only user-adjustable filters clear.
+  function clearFilters() {
+    setFilters(initialFilters);
+    setSearch("");
+    setPage(1);
+  }
+
   function updateSearch(value: string) {
     setSearch(value);
     setPage(1);
@@ -116,6 +124,7 @@ export function useListQuery<T extends { id: number }>(basePath: string, initial
     toggleSelect,
     toggleSelectAll,
     setFilter,
+    clearFilters,
     setSearch: updateSearch,
     clearSelection: () => setSelected(new Set()),
     // Exposed so pages that need "select all" to exclude certain rows (e.g. the actor's

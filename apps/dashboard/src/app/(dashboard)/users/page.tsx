@@ -15,6 +15,7 @@ import { Select } from "@/components/ui/select";
 import { toTitleCase } from "@/lib/titlecase";
 import { EditIcon, TrashIcon, PowerIcon } from "@/components/icons";
 import { ListFooter, SortableTh, SearchInput, BulkToolbar } from "@/components/dashboard/list-controls";
+import { FilterBar } from "@/components/dashboard/filter-bar";
 
 type Role = "super_admin" | "admin" | "marketer";
 type UserRow = {
@@ -193,24 +194,30 @@ export default function UsersPage() {
         </form>
       )}
 
-      <div className="c-users__filters mt-6 flex flex-wrap items-end gap-3">
-        <SearchInput id="users-search" value={list.search} onChange={list.setSearch} placeholder="Search by name or email…" />
-        <Select
-          id="users-role-filter"
-          label="Role"
-          className="w-40"
-          value={list.filters.role ?? ""}
-          onChange={(e) => list.setFilter("role", e.target.value)}
-          options={ROLE_FILTER_OPTIONS}
-        />
-        <Select
-          id="users-status-filter"
-          label="Status"
-          className="w-40"
-          value={list.filters.status ?? ""}
-          onChange={(e) => list.setFilter("status", e.target.value)}
-          options={STATUS_FILTER_OPTIONS}
-        />
+      <div className="c-users__filters mt-6">
+        <FilterBar
+          id="users-filters"
+          activeCount={(list.search ? 1 : 0) + Object.values(list.filters).filter(Boolean).length}
+          onClear={list.clearFilters}
+        >
+          <SearchInput id="users-search" value={list.search} onChange={list.setSearch} placeholder="Search by name or email…" />
+          <Select
+            id="users-role-filter"
+            label="Role"
+            className="w-40"
+            value={list.filters.role ?? ""}
+            onChange={(e) => list.setFilter("role", e.target.value)}
+            options={ROLE_FILTER_OPTIONS}
+          />
+          <Select
+            id="users-status-filter"
+            label="Status"
+            className="w-40"
+            value={list.filters.status ?? ""}
+            onChange={(e) => list.setFilter("status", e.target.value)}
+            options={STATUS_FILTER_OPTIONS}
+          />
+        </FilterBar>
       </div>
 
       <div className="mt-3">

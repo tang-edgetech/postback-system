@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import { toTitleCase } from "@/lib/titlecase";
 import { EditIcon, TrashIcon, CheckIcon, XIcon, PowerIcon } from "@/components/icons";
 import { ListFooter, SortableTh, SearchInput, BulkToolbar } from "@/components/dashboard/list-controls";
+import { FilterBar } from "@/components/dashboard/filter-bar";
 
 type EntityRow = {
   id: number;
@@ -167,16 +168,22 @@ export function SimpleEntityManager({ title, apiPath, entityLabel, permissionPre
         </form>
       )}
 
-      <div className="c-entity-manager__filters mt-6 flex flex-wrap items-end gap-3">
-        <SearchInput id={`${slug}-search`} value={list.search} onChange={list.setSearch} placeholder={`Search ${slug}s…`} />
-        <Select
-          id={`${slug}-status-filter`}
-          label="Status"
-          className="w-40"
-          value={list.filters.status ?? ""}
-          onChange={(e) => list.setFilter("status", e.target.value)}
-          options={STATUS_OPTIONS}
-        />
+      <div className="c-entity-manager__filters mt-6">
+        <FilterBar
+          id={`${slug}-filters`}
+          activeCount={(list.search ? 1 : 0) + Object.values(list.filters).filter(Boolean).length}
+          onClear={list.clearFilters}
+        >
+          <SearchInput id={`${slug}-search`} value={list.search} onChange={list.setSearch} placeholder={`Search ${slug}s…`} />
+          <Select
+            id={`${slug}-status-filter`}
+            label="Status"
+            className="w-40"
+            value={list.filters.status ?? ""}
+            onChange={(e) => list.setFilter("status", e.target.value)}
+            options={STATUS_OPTIONS}
+          />
+        </FilterBar>
       </div>
 
       {canBulk && (

@@ -19,6 +19,7 @@ import {
   UsersIcon,
   ProfileIcon,
   AuditLogsIcon,
+  ReportsIcon,
   SettingsIcon,
   SunIcon,
   MoonIcon,
@@ -32,6 +33,7 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: Role[];
+  permission?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -39,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/links", label: "Links", icon: LinksIcon },
   { href: "/campaigns", label: "Campaigns", icon: CampaignsIcon },
   { href: "/merchants", label: "Merchants", icon: MerchantsIcon },
+  { href: "/reports", label: "Reports", icon: ReportsIcon, permission: "reports.view" },
   { href: "/users", label: "Users", icon: UsersIcon, roles: ["super_admin", "admin"] },
   { href: "/profile", label: "Profile", icon: ProfileIcon },
   { href: "/audit-logs", label: "Audit Logs", icon: AuditLogsIcon },
@@ -60,7 +63,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const visibleItems = NAV_ITEMS.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => (!item.roles || (user && item.roles.includes(user.role))) && (!item.permission || Boolean(user?.permissions[item.permission]))
+  );
 
   async function handleLogout() {
     const confirmed = await confirm({

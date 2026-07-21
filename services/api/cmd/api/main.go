@@ -67,6 +67,8 @@ func main() {
 	sessionsHandler := &handler.SessionsHandler{DB: sqlDB}
 	media := &handler.MediaHandler{DB: sqlDB, UploadDir: config.GetEnv("UPLOAD_DIR", "./uploads")}
 	setup := &handler.SetupHandler{DB: sqlDB, Sessions: sessions, CookieDomain: cookieDomain, CookieSecure: cookieSecure}
+	linkForwarding := &handler.ForwardingHandler{DB: sqlDB, EncryptionKey: encryptionKey}
+	reports := &handler.ReportsHandler{DB: sqlDB}
 
 	requireAuth := middleware.RequireAuth(sessions)
 	adminOrSuper := middleware.RequireRole(models.RoleSuperAdmin, models.RoleAdmin)
@@ -137,6 +139,14 @@ func main() {
 	mux.Handle("DELETE /v1/links/{id}", withPermission(links.Delete, permissions.LinksDelete))
 	mux.Handle("PATCH /v1/links/bulk/status", withPermission(links.BulkStatus, permissions.LinksStatus))
 	mux.Handle("POST /v1/links/bulk/delete", withPermission(links.BulkDelete, permissions.LinksDelete))
+
+	mux.Handle("GET /v1/links/{id}/forwarding", withPermission(linkForwarding.GetConfig, permissions.LinksForwarding))
+	mux.Handle("PATCH /v1/links/{id}/forwarding", withPermission(linkForwarding.UpsertConfig, permissions.LinksForwarding))
+	mux.Handle("POST /v1/links/{id}/forwarding/send-now", withPermission(linkForwarding.SendNow, permissions.LinksForwarding))
+	mux.Handle("GET /v1/links/{id}/forwarding/deliveries", withPermission(linkForwarding.Deliveries, permissions.LinksForwarding))
+
+	mux.Handle("GET /v1/reports", withPermission(reports.Get, permissions.ReportsView))
+	mux.Handle("GET /v1/reports/export", withPermission(reports.Export, permissions.ReportsView))
 
 	mux.Handle("GET /v1/profile", authOnly(profile.Get))
 	mux.Handle("PATCH /v1/profile", authOnly(profile.UpdateName))
