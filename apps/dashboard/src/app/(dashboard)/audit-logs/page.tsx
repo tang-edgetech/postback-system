@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toTitleCase } from "@/lib/titlecase";
 import { SortableTh, SearchInput, ListFooter } from "@/components/dashboard/list-controls";
+import { FilterBar } from "@/components/dashboard/filter-bar";
 
 type AuditLogRow = {
   id: number;
@@ -51,40 +52,46 @@ export default function AuditLogsPage() {
         </Button>
       </div>
 
-      <div className="c-audit-logs__filters mt-6 flex flex-wrap items-end gap-3">
-        <SearchInput id="audit-logs-search" value={list.search} onChange={list.setSearch} placeholder="Search by name, email or action…" />
-        <Select
-          id="audit-logs-action-filter"
-          label="Action"
-          className="w-48"
-          value={list.filters.action ?? ""}
-          onChange={(e) => list.setFilter("action", e.target.value)}
-          options={actionOptions}
-        />
-        <div className="c-field flex flex-col gap-1">
-          <label htmlFor="audit-logs-date-from" className="c-field__label text-md font-medium text-foreground">
-            From Date
-          </label>
-          <input
-            id="audit-logs-date-from"
-            type="date"
-            value={list.filters.date_from ?? ""}
-            onChange={(e) => list.setFilter("date_from", e.target.value)}
-            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+      <div className="c-audit-logs__filters mt-6">
+        <FilterBar
+          id="audit-logs-filters"
+          activeCount={(list.search ? 1 : 0) + Object.values(list.filters).filter(Boolean).length}
+          onClear={list.clearFilters}
+        >
+          <SearchInput id="audit-logs-search" value={list.search} onChange={list.setSearch} placeholder="Search by name, email or action…" />
+          <Select
+            id="audit-logs-action-filter"
+            label="Action"
+            className="w-48"
+            value={list.filters.action ?? ""}
+            onChange={(e) => list.setFilter("action", e.target.value)}
+            options={actionOptions}
           />
-        </div>
-        <div className="c-field flex flex-col gap-1">
-          <label htmlFor="audit-logs-date-to" className="c-field__label text-md font-medium text-foreground">
-            To Date
-          </label>
-          <input
-            id="audit-logs-date-to"
-            type="date"
-            value={list.filters.date_to ?? ""}
-            onChange={(e) => list.setFilter("date_to", e.target.value)}
-            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-          />
-        </div>
+          <div className="c-field flex flex-col gap-1">
+            <label htmlFor="audit-logs-date-from" className="c-field__label text-md font-medium text-foreground">
+              From Date
+            </label>
+            <input
+              id="audit-logs-date-from"
+              type="date"
+              value={list.filters.date_from ?? ""}
+              onChange={(e) => list.setFilter("date_from", e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+            />
+          </div>
+          <div className="c-field flex flex-col gap-1">
+            <label htmlFor="audit-logs-date-to" className="c-field__label text-md font-medium text-foreground">
+              To Date
+            </label>
+            <input
+              id="audit-logs-date-to"
+              type="date"
+              value={list.filters.date_to ?? ""}
+              onChange={(e) => list.setFilter("date_to", e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+            />
+          </div>
+        </FilterBar>
       </div>
 
       <div className="c-audit-logs__table-wrap mt-6 overflow-x-auto rounded-lg border border-border">

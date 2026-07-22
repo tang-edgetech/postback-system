@@ -23,6 +23,8 @@ const (
 	LinksEdit       = "links.edit"
 	LinksStatus     = "links.status"
 	LinksDelete     = "links.delete"
+	LinksForwarding = "links.forwarding"
+	ReportsView     = "reports.view"
 	AuditLogsView   = "audit_logs.view"
 )
 
@@ -31,7 +33,8 @@ var AllKeys = []string{
 	UsersManage,
 	MerchantsCreate, MerchantsEdit, MerchantsStatus, MerchantsDelete,
 	CampaignsCreate, CampaignsEdit, CampaignsStatus, CampaignsDelete,
-	LinksCreate, LinksEdit, LinksStatus, LinksDelete,
+	LinksCreate, LinksEdit, LinksStatus, LinksDelete, LinksForwarding,
+	ReportsView,
 	AuditLogsView,
 }
 

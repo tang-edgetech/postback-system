@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import { toTitleCase } from "@/lib/titlecase";
 import { EditIcon, TrashIcon, CheckIcon, XIcon, PowerIcon } from "@/components/icons";
 import { ListFooter, SortableTh, SearchInput, BulkToolbar } from "@/components/dashboard/list-controls";
+import { FilterBar } from "@/components/dashboard/filter-bar";
 
 type CampaignRow = {
   id: number;
@@ -186,24 +187,30 @@ export function CampaignManager() {
         </form>
       )}
 
-      <div className="c-entity-manager__filters mt-6 flex flex-wrap items-end gap-3">
-        <SearchInput id="campaigns-search" value={list.search} onChange={list.setSearch} placeholder="Search campaigns…" />
-        <Select
-          id="campaigns-status-filter"
-          label="Status"
-          className="w-40"
-          value={list.filters.status ?? ""}
-          onChange={(e) => list.setFilter("status", e.target.value)}
-          options={STATUS_OPTIONS}
-        />
-        <Select
-          id="campaigns-tenant-filter"
-          label="Merchant"
-          className="w-44"
-          value={list.filters.tenant_id ?? ""}
-          onChange={(e) => list.setFilter("tenant_id", e.target.value)}
-          options={[{ value: "", label: "All Merchants" }, ...merchantOptions]}
-        />
+      <div className="c-entity-manager__filters mt-6">
+        <FilterBar
+          id="campaigns-filters"
+          activeCount={(list.search ? 1 : 0) + Object.values(list.filters).filter(Boolean).length}
+          onClear={list.clearFilters}
+        >
+          <SearchInput id="campaigns-search" value={list.search} onChange={list.setSearch} placeholder="Search campaigns…" />
+          <Select
+            id="campaigns-status-filter"
+            label="Status"
+            className="w-40"
+            value={list.filters.status ?? ""}
+            onChange={(e) => list.setFilter("status", e.target.value)}
+            options={STATUS_OPTIONS}
+          />
+          <Select
+            id="campaigns-tenant-filter"
+            label="Merchant"
+            className="w-44"
+            value={list.filters.tenant_id ?? ""}
+            onChange={(e) => list.setFilter("tenant_id", e.target.value)}
+            options={[{ value: "", label: "All Merchants" }, ...merchantOptions]}
+          />
+        </FilterBar>
       </div>
 
       {canBulk && (

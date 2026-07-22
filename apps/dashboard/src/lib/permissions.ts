@@ -13,6 +13,8 @@ export const permissions = [
   "links.edit",
   "links.status",
   "links.delete",
+  "links.forwarding",
+  "reports.view",
   "audit_logs.view",
 ] as const;
 

@@ -15,10 +15,10 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { toTitleCase } from "@/lib/titlecase";
 import { ArrowLeftIcon, LinksIcon, EditIcon, ChevronRightIcon, RefreshIcon } from "@/components/icons";
 import { ListFooter, SortableTh, SearchInput, MultiSelectFilter } from "@/components/dashboard/list-controls";
-
-const DEVICE_OPTIONS = ["Desktop", "Mobile", "Tablet", "Bot"];
-const OS_OPTIONS = ["Windows", "macOS", "Android", "iOS", "Linux", "Unknown"];
-const BROWSER_OPTIONS = ["Chrome", "Firefox", "Safari", "Edge", "Opera", "HTTP Client", "Unknown"];
+import { LinkForwardingTab } from "@/components/dashboard/link-forwarding-tab";
+import { TabBar } from "@/components/dashboard/tab-bar";
+import { FilterBar } from "@/components/dashboard/filter-bar";
+import { DEVICE_OPTIONS, OS_OPTIONS, BROWSER_OPTIONS } from "@/lib/click-filter-options";
 
 type LinkDetail = {
   id: number;
@@ -75,7 +75,7 @@ const PARAM_MODE_OPTIONS = [
   { value: "pass_all", label: "Pass All Parameters" },
 ];
 
-const TABS = ["Overview", "Integration", "History"] as const;
+const TABS = ["Overview", "Integration", "Forwarding", "History"] as const;
 type Tab = (typeof TABS)[number];
 
 function toDatetimeLocal(iso: string | null) {
@@ -114,7 +114,8 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
   const { user } = useAuth();
   const canEdit = user?.permissions["links.edit"] ?? false;
   const canViewHistory = user?.permissions["audit_logs.view"] ?? false;
-  const visibleTabs = TABS.filter((t) => t !== "History" || canViewHistory);
+  const canForward = user?.permissions["links.forwarding"] ?? false;
+  const visibleTabs = TABS.filter((t) => (t !== "History" || canViewHistory) && (t !== "Forwarding" || canForward));
 
   const [link, setLink] = useState<LinkDetail | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
@@ -228,18 +229,8 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
         <CopyButton id="single-link-copy" value={shortUrl} />
       </div>
 
-      <div id="single-link-tabs" className="mt-6 flex gap-1 border-b border-border">
-        {visibleTabs.map((t) => (
-          <button
-            key={t}
-            id={`single-link-tab-${t.toLowerCase()}`}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium ${tab === t ? "border-b-2 border-accent text-accent" : "text-foreground-muted hover:text-foreground"}`}
-          >
-            {toTitleCase(t)}
-          </button>
-        ))}
+      <div className="mt-6">
+        <TabBar id="single-link-tabs" tabs={visibleTabs} active={tab} onChange={setTab} />
       </div>
 
       {tab === "Overview" && (
@@ -325,63 +316,69 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
               <IconButton id="single-link-visits-refresh" icon={<RefreshIcon />} label="Refresh" onClick={() => clicks.refetch()} />
             </div>
 
-            <div className="mt-3 flex flex-wrap items-end gap-3">
-              <SearchInput id="single-link-visits-search" value={clicks.search} onChange={clicks.setSearch} placeholder="Search event name or extra fields…" />
-              <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-md font-medium text-foreground-muted">Created From</label>
-                <input
-                  id="single-link-visits-date-from"
-                  type="date"
-                  value={clicks.filters.date_from ?? ""}
-                  onChange={(e) => clicks.setFilter("date_from", e.target.value)}
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            <div className="mt-3">
+              <FilterBar
+                id="single-link-visits-filters"
+                activeCount={(clicks.search ? 1 : 0) + Object.values(clicks.filters).filter(Boolean).length}
+                onClear={clicks.clearFilters}
+              >
+                <SearchInput id="single-link-visits-search" value={clicks.search} onChange={clicks.setSearch} placeholder="Search event name or extra fields…" />
+                <div className="c-field flex flex-col gap-1">
+                  <label className="c-field__label text-md font-medium text-foreground-muted">Created From</label>
+                  <input
+                    id="single-link-visits-date-from"
+                    type="date"
+                    value={clicks.filters.date_from ?? ""}
+                    onChange={(e) => clicks.setFilter("date_from", e.target.value)}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+                <div className="c-field flex flex-col gap-1">
+                  <label className="c-field__label text-md font-medium text-foreground-muted">Created To</label>
+                  <input
+                    id="single-link-visits-date-to"
+                    type="date"
+                    value={clicks.filters.date_to ?? ""}
+                    onChange={(e) => clicks.setFilter("date_to", e.target.value)}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+                <div className="c-field flex flex-col gap-1">
+                  <label className="c-field__label text-md font-medium text-foreground-muted">Postback Received From</label>
+                  <input
+                    id="single-link-visits-postback-from"
+                    type="date"
+                    value={clicks.filters.postback_from ?? ""}
+                    onChange={(e) => clicks.setFilter("postback_from", e.target.value)}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+                <div className="c-field flex flex-col gap-1">
+                  <label className="c-field__label text-md font-medium text-foreground-muted">Postback Received To</label>
+                  <input
+                    id="single-link-visits-postback-to"
+                    type="date"
+                    value={clicks.filters.postback_to ?? ""}
+                    onChange={(e) => clicks.setFilter("postback_to", e.target.value)}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+                <MultiSelectFilter
+                  id="single-link-visits-device-filter"
+                  label="Device"
+                  options={DEVICE_OPTIONS}
+                  value={clicks.filters.device ?? ""}
+                  onChange={(v) => clicks.setFilter("device", v)}
                 />
-              </div>
-              <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-md font-medium text-foreground-muted">Created To</label>
-                <input
-                  id="single-link-visits-date-to"
-                  type="date"
-                  value={clicks.filters.date_to ?? ""}
-                  onChange={(e) => clicks.setFilter("date_to", e.target.value)}
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                <MultiSelectFilter id="single-link-visits-os-filter" label="OS" options={OS_OPTIONS} value={clicks.filters.os ?? ""} onChange={(v) => clicks.setFilter("os", v)} />
+                <MultiSelectFilter
+                  id="single-link-visits-browser-filter"
+                  label="Browser"
+                  options={BROWSER_OPTIONS}
+                  value={clicks.filters.browser ?? ""}
+                  onChange={(v) => clicks.setFilter("browser", v)}
                 />
-              </div>
-              <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-md font-medium text-foreground-muted">Postback Received From</label>
-                <input
-                  id="single-link-visits-postback-from"
-                  type="date"
-                  value={clicks.filters.postback_from ?? ""}
-                  onChange={(e) => clicks.setFilter("postback_from", e.target.value)}
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-                />
-              </div>
-              <div className="c-field flex flex-col gap-1">
-                <label className="c-field__label text-md font-medium text-foreground-muted">Postback Received To</label>
-                <input
-                  id="single-link-visits-postback-to"
-                  type="date"
-                  value={clicks.filters.postback_to ?? ""}
-                  onChange={(e) => clicks.setFilter("postback_to", e.target.value)}
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-                />
-              </div>
-              <MultiSelectFilter
-                id="single-link-visits-device-filter"
-                label="Device"
-                options={DEVICE_OPTIONS}
-                value={clicks.filters.device ?? ""}
-                onChange={(v) => clicks.setFilter("device", v)}
-              />
-              <MultiSelectFilter id="single-link-visits-os-filter" label="OS" options={OS_OPTIONS} value={clicks.filters.os ?? ""} onChange={(v) => clicks.setFilter("os", v)} />
-              <MultiSelectFilter
-                id="single-link-visits-browser-filter"
-                label="Browser"
-                options={BROWSER_OPTIONS}
-                value={clicks.filters.browser ?? ""}
-                onChange={(v) => clicks.setFilter("browser", v)}
-              />
+              </FilterBar>
             </div>
 
             <div className="mt-3 overflow-x-auto rounded-lg border border-border">
@@ -491,13 +488,13 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
           </p>
           <div>
             <p className="mb-1 text-md font-medium text-foreground-muted">GET Request</p>
-            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-md text-emerald-300">
+            <pre className="whitespace-pre-wrap break-words rounded-md bg-slate-900 p-3 text-md text-emerald-300">
               <code>{`GET ${apiBase}/postback?cid={cid}&tid={tid}&event_name={event_name}`}</code>
             </pre>
           </div>
           <div>
             <p className="mb-1 text-md font-medium text-foreground-muted">POST Request</p>
-            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-md text-emerald-300">
+            <pre className="whitespace-pre-wrap break-words rounded-md bg-slate-900 p-3 text-md text-emerald-300">
               <code>{`POST ${apiBase}/postback\nContent-Type: application/x-www-form-urlencoded\n\ncid={cid}&tid={tid}&event_name={event_name}`}</code>
             </pre>
           </div>
@@ -507,6 +504,8 @@ export function SingleLinkView({ linkId }: { linkId: number }) {
           </p>
         </div>
       )}
+
+      {tab === "Forwarding" && <LinkForwardingTab linkId={linkId} />}
 
       {tab === "History" && (
         <div className="mt-6">

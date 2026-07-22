@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
 import { ClipboardIcon, CheckIcon } from "@/components/icons";
+import { useTooltip, TooltipPortal } from "./tooltip";
 
 export function CopyButton({ value, id }: { value: string; id: string }) {
   const [copied, setCopied] = useState(false);
+  const { anchorRef, tooltipRef, triggerProps, visible, coords } = useTooltip<HTMLButtonElement>();
 
   async function handleCopy() {
     const success = await copyToClipboard(value);
@@ -18,8 +20,9 @@ export function CopyButton({ value, id }: { value: string; id: string }) {
   const label = copied ? "Copied" : "Copy";
 
   return (
-    <span className="c-copy-btn-wrap group relative inline-flex">
+    <>
       <button
+        ref={anchorRef}
         id={id}
         type="button"
         aria-label={label}
@@ -27,15 +30,13 @@ export function CopyButton({ value, id }: { value: string; id: string }) {
         className={`c-copy-btn inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
           copied ? "text-emerald-600" : "text-foreground-muted hover:bg-surface-alt hover:text-foreground"
         }`}
+        {...triggerProps}
       >
         {copied ? <CheckIcon /> : <ClipboardIcon />}
       </button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-md text-slate-50 shadow-md group-hover:block"
-      >
+      <TooltipPortal tooltipRef={tooltipRef} visible={visible} coords={coords}>
         {label}
-      </span>
-    </span>
+      </TooltipPortal>
+    </>
   );
 }

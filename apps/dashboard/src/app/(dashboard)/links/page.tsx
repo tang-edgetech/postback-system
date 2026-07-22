@@ -14,6 +14,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { toTitleCase } from "@/lib/titlecase";
 import { EditIcon, TrashIcon, PowerIcon } from "@/components/icons";
 import { ListFooter, SortableTh, SearchInput, BulkToolbar } from "@/components/dashboard/list-controls";
+import { FilterBar } from "@/components/dashboard/filter-bar";
 
 type LinkRow = {
   id: number;
@@ -159,32 +160,38 @@ export default function LinksPage() {
         )}
       </div>
 
-      <div className="c-links__filters mt-6 flex flex-wrap items-end gap-3">
-        <SearchInput id="links-search" value={list.search} onChange={list.setSearch} placeholder="Search by slug or remarks…" />
-        <Select
-          id="links-tenant-filter"
-          label="Merchant"
-          className="w-44"
-          value={list.filters.tenant_id ?? ""}
-          onChange={(e) => list.setFilter("tenant_id", e.target.value)}
-          options={[{ value: "", label: "All Merchants" }, ...tenants.map((t) => ({ value: String(t.id), label: t.name }))]}
-        />
-        <Select
-          id="links-campaign-filter"
-          label="Campaign"
-          className="w-44"
-          value={list.filters.campaign_id ?? ""}
-          onChange={(e) => list.setFilter("campaign_id", e.target.value)}
-          options={[{ value: "", label: "All Campaigns" }, ...campaigns.map((c) => ({ value: String(c.id), label: c.name }))]}
-        />
-        <Select
-          id="links-status-filter"
-          label="Status"
-          className="w-40"
-          value={list.filters.status ?? ""}
-          onChange={(e) => list.setFilter("status", e.target.value)}
-          options={STATUS_OPTIONS}
-        />
+      <div className="c-links__filters mt-6">
+        <FilterBar
+          id="links-filters"
+          activeCount={(list.search ? 1 : 0) + Object.values(list.filters).filter(Boolean).length}
+          onClear={list.clearFilters}
+        >
+          <SearchInput id="links-search" value={list.search} onChange={list.setSearch} placeholder="Search by slug or remarks…" />
+          <Select
+            id="links-tenant-filter"
+            label="Merchant"
+            className="w-44"
+            value={list.filters.tenant_id ?? ""}
+            onChange={(e) => list.setFilter("tenant_id", e.target.value)}
+            options={[{ value: "", label: "All Merchants" }, ...tenants.map((t) => ({ value: String(t.id), label: t.name }))]}
+          />
+          <Select
+            id="links-campaign-filter"
+            label="Campaign"
+            className="w-44"
+            value={list.filters.campaign_id ?? ""}
+            onChange={(e) => list.setFilter("campaign_id", e.target.value)}
+            options={[{ value: "", label: "All Campaigns" }, ...campaigns.map((c) => ({ value: String(c.id), label: c.name }))]}
+          />
+          <Select
+            id="links-status-filter"
+            label="Status"
+            className="w-40"
+            value={list.filters.status ?? ""}
+            onChange={(e) => list.setFilter("status", e.target.value)}
+            options={STATUS_OPTIONS}
+          />
+        </FilterBar>
       </div>
 
       {canBulk && (

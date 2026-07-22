@@ -14,6 +14,7 @@ import { toTitleCase } from "@/lib/titlecase";
 import { UploadIcon } from "@/components/icons";
 import { permissions as PERMISSION_KEYS, ROLE_COLUMNS, formatPermissionKey } from "@/lib/permissions";
 import { EntityMultiSelect } from "@/components/dashboard/entity-multi-select";
+import { TabBar } from "@/components/dashboard/tab-bar";
 
 type SettingsData = {
   site_title: string;
@@ -254,20 +255,8 @@ export default function SettingsPage() {
     <div id="page-settings" className="c-settings max-w-3xl">
       <h1 className="c-settings__title text-[26px] leading-8 font-semibold text-foreground">Settings</h1>
 
-      <div id="settings-tabs" className="c-settings__tabs mt-4 flex gap-1 border-b border-border">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            id={`settings-tab-${t.toLowerCase()}`}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`c-settings__tab px-4 py-2 text-sm font-medium ${
-              tab === t ? "border-b-2 border-accent text-accent" : "text-foreground-muted hover:text-foreground"
-            }`}
-          >
-            {toTitleCase(t)}
-          </button>
-        ))}
+      <div className="c-settings__tabs mt-4">
+        <TabBar id="settings-tabs" tabs={TABS} active={tab} onChange={setTab} />
       </div>
 
       {loading ? (
