@@ -1,0 +1,74 @@
+# Production reverse-proxy vhosts for the Postback System — mirrors the local dev config
+# (deploy/apache/babawha-local.conf) but for the real domains, over TLS.
+#
+# Requires on the server:
+#   - Apache modules: mod_proxy, mod_proxy_http, mod_ssl, mod_rewrite (a2enmod on
+#     Debian/Ubuntu; check `apachectl -M` / cPanel's EasyApache module list on WHM)
+#   - DNS: babawha.com, babapi.babawha.com, backdash.babawha.com all pointing at this
+#     server's public IP
+#   - TLS certificates for all three hostnames, e.g. via certbot:
+#       certbot certonly --apache -d babawha.com -d babapi.babawha.com -d backdash.babawha.com
+#     (or a wildcard cert for *.babawha.com + babawha.com itself)
+#
+# Copy this file to babawha-production.conf, fill in the cert paths below, then include it
+# from your main Apache config (httpd.conf / apache2.conf, or WHM's "Include Editor").
+#
+# All three Go/Node services must already be running locally on 8081/8082/8083 (see
+# deploy/systemd/) before enabling these vhosts.
+
+# ---- babawha.com — public redirect front door ----
+<VirtualHost *:80>
+    ServerName babawha.com
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName babawha.com
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/babawha.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/babawha.com/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:8081/
+    ProxyPassReverse / http://127.0.0.1:8081/
+</VirtualHost>
+
+# ---- babapi.babawha.com — dashboard REST API + postback receiver ----
+<VirtualHost *:80>
+    ServerName babapi.babawha.com
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName babapi.babawha.com
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/babapi.babawha.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/babapi.babawha.com/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:8082/
+    ProxyPassReverse / http://127.0.0.1:8082/
+</VirtualHost>
+
+# ---- backdash.babawha.com — admin dashboard (Next.js) ----
+<VirtualHost *:80>
+    ServerName backdash.babawha.com
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName backdash.babawha.com
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/backdash.babawha.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/backdash.babawha.com/privkey.pem
+
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:8083/
+    ProxyPassReverse / http://127.0.0.1:8083/
+</VirtualHost>

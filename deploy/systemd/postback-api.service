@@ -1,0 +1,20 @@
+[Unit]
+Description=Postback System - API Service (babapi.babawha.com)
+After=network.target mysql.service redis.service
+
+[Service]
+Type=simple
+User=postback
+Group=postback
+# Must run from services/api/ (not the repo root) so the default relative
+# UPLOAD_DIR=./uploads resolves to services/api/uploads — or set UPLOAD_DIR to an
+# absolute path in the .env file below and drop this requirement entirely.
+WorkingDirectory=/opt/postback-system/services/api
+EnvironmentFile=/opt/postback-system/services/api/.env
+ExecStart=/opt/postback-system/bin/api
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

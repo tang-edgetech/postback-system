@@ -1,0 +1,18 @@
+[Unit]
+Description=Postback System - Redirect Service (babawha.com)
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=postback
+Group=postback
+WorkingDirectory=/opt/postback-system
+EnvironmentFile=/opt/postback-system/services/redirect/.env
+ExecStart=/opt/postback-system/bin/redirect
+Restart=always
+RestartSec=3
+# Bind to localhost only — nginx/Apache is the sole public listener (see deploy/apache).
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Postback System - Dashboard (backdash.babawha.com)
+After=network.target postback-api.service
+
+[Service]
+Type=simple
+User=postback
+Group=postback
+WorkingDirectory=/opt/postback-system/apps/dashboard
+EnvironmentFile=/opt/postback-system/apps/dashboard/.env.local
+ExecStart=/usr/bin/npm run start -- -p 8083
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

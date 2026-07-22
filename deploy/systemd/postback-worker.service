@@ -1,0 +1,17 @@
+[Unit]
+Description=Postback System - Worker (Links > Forwarding daily sweep)
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=postback
+Group=postback
+WorkingDirectory=/opt/postback-system
+EnvironmentFile=/opt/postback-system/services/worker/.env
+ExecStart=/opt/postback-system/bin/worker
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
