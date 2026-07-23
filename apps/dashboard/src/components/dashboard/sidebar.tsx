@@ -55,7 +55,7 @@ type SidebarProps = {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
-  const { siteTitle, faviconUrl } = useBranding();
+  const { siteTitle, faviconUrl, loginPath } = useBranding();
   const { theme, toggleTheme } = useTheme();
   const confirm = useConfirm();
   const toast = useToast();
@@ -79,7 +79,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     try {
       await withMinDelay(logout());
       toast.info("You have been logged out.");
-      router.replace("/login");
+      router.replace(`/${loginPath}`);
     } finally {
       setLoggingOut(false);
     }

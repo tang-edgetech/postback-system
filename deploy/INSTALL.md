@@ -6,7 +6,7 @@ of them.
 
 ## 1. Architecture — which domain goes where
 
-| Public domain | Proxies to (localhost) | What it is | Source / binary |
+| Public domain | Proxies to (on this same server) | What it is | Source / binary |
 |---|---|---|---|
 | `babawha.com` | `127.0.0.1:8081` | Redirect front door — hot-path `/{slug}` 302 redirect + click logging | `services/redirect` → `bin/redirect` |
 | `babapi.babawha.com` | `127.0.0.1:8082` | Dashboard REST API + public postback receiver (`/postback`, `/v1/postback`) | `services/api` → `bin/api` |
@@ -30,15 +30,14 @@ touches it.
   this is a shared cPanel/WHM environment)
 - **Go 1.26+** (matches `go.work`) — needed to *build* the three binaries; not required
   at runtime once built
-- **Node.js 20 LTS+** (dev was built/tested on Node 22) — needed both to build and run
-  the dashboard (`next start` is a real running process, not a static export)
+- **Node.js 20 LTS+** — needed both to build and run the dashboard (`next start` is a
+  real running process, not a static export)
 - **MySQL 8.0+ or MariaDB 10.5+** — the schema uses `CHECK` constraints (migrations
   0001, 0008) that need a version new enough to enforce them
-- **Redis** (real Redis on Linux — Memurai was only a Windows dev-environment stand-in)
-  — used for dashboard sessions; the redirect service does **not** use Redis at all
-  currently (no fraud/cache layer yet — see §8)
+- **Redis** — used for dashboard sessions; the redirect service does **not** use Redis
+  at all currently (no fraud/cache layer yet — see §11)
 - **Apache** with `mod_proxy`, `mod_proxy_http`, `mod_ssl`, `mod_rewrite` (or nginx if
-  you'd rather not use Apache — see the note in §6)
+  you'd rather not use Apache — see §9)
 - `certbot` (or your existing WHM/cPanel TLS flow) for certificates on all three hostnames
 - `git`
 
@@ -51,9 +50,6 @@ git clone https://github.com/tang-edgetech/postback-system.git /opt/postback-sys
 cd /opt/postback-system
 git checkout main
 ```
-
-`main` and `dev-reports` are identical as of this deploy (dev-reports was merged into
-main, not left as a separate line) — `main` is the one to deploy.
 
 ## 4. Database setup — yes, it's just the migrations
 
@@ -84,23 +80,18 @@ for f in 0001_init_schema.up.sql \
 done
 ```
 
-**Do not use `root` with no password in production** — that's a local-XAMPP-only
-convention documented in `CLAUDE.md`, never intended to reach a real server. Use the
-dedicated `postback` user above (or whatever name your ops convention prefers) and put
-the real password only in the `.env` files in §6, never in shell history/scripts checked
+Use a dedicated DB user with a real password (never `root`/blank password) — put the
+real password only in the `.env` files in §6, never in shell history/scripts checked
 into git.
 
 No seed data is applied — the first real user account is created through the Setup
-Wizard in §7, not by a script. (There's a leftover `services/api/cmd/seed` dev utility
-in the repo history — ignore it, it predates the Setup Wizard and isn't part of this
-flow.)
+Wizard in §7, not by a script.
 
 ## 5. Build the binaries
 
-Build must happen with the full repo checked out (needs `go.work` to resolve the
-`shared` module) — but the *output* is a normal static Go binary with zero runtime
-dependency on the source tree or `go.work`. Building directly on the target server
-(matching its OS/arch, no cross-compile flags needed) is the simplest path:
+Build on the server itself, from the full repo checkout (needs `go.work` to resolve the
+`shared` module) — the *output* is a normal static Go binary with zero runtime
+dependency on the source tree or `go.work` after that:
 
 ```bash
 cd /opt/postback-system
@@ -109,10 +100,6 @@ go build -o bin/redirect ./services/redirect/cmd/redirect
 go build -o bin/api      ./services/api/cmd/api
 go build -o bin/worker   ./services/worker/cmd/worker
 ```
-
-(Building from a Windows dev machine and copying the binaries over also works — cross-compile
-with `GOOS=linux GOARCH=amd64 go build ...` — but there's no CGO dependency here, so
-building natively on the server is one less thing to get wrong.)
 
 Dashboard:
 
@@ -164,8 +151,9 @@ process ends up being started.
 DB_DSN=postback:REAL_PASSWORD@tcp(127.0.0.1:3306)/postback_system?parseTime=true&charset=utf8mb4
 SETTINGS_ENCRYPTION_KEY=<same value as services/api/.env — must match exactly>
 ```
-(`FORWARDING_RUN_ON_START=true` is a dev-only convenience for testing without waiting
-for local midnight — leave it unset/`false` in production.)
+(`FORWARDING_RUN_ON_START=true` runs an immediate sweep on boot instead of waiting for
+the next scheduled midnight run — a one-time convenience for verifying it works right
+after setup; leave it unset/`false` for normal operation afterward.)
 
 **`apps/dashboard/.env.local`**
 ```
@@ -184,8 +172,8 @@ if a staging environment or a www/non-www split is ever needed at the same time.
 
 1. Create `services/api/uploads/` if it doesn't already exist and make sure the service
    user can write to it: `mkdir -p /opt/postback-system/services/api/uploads`. (Note:
-   two files already exist there from dev testing — a placeholder logo/favicon. Replace
-   them via Settings → General once the dashboard is up, or delete them beforehand for a
+   the repo ships with a placeholder logo/favicon already in that folder — replace them
+   via Settings → General once the dashboard is up, or delete them beforehand for a
    clean slate.)
 2. Start `redirect`, `api`, and `worker` (see §9 for the systemd units) — `api` will
    auto-insert a default `settings` row on first boot (`INSERT IGNORE`), so there's
@@ -216,17 +204,15 @@ Each unit sets `Restart=always` and reads its `.env` file from §6 via
 
 ## 9. Reverse proxy + TLS
 
-The local dev setup already proves Apache + `mod_proxy` works well for this exact
-3-domain-to-3-ports pattern (`deploy/apache/babawha-local.conf`) — the production
-version (`deploy/apache/babawha-production.conf.example`) is the same shapes, just with
-real hostnames and TLS termination. Copy it, fill in your certificate paths, and include
-it from your main Apache config (or WHM's Include Editor if this is a cPanel box).
+Use `deploy/apache/babawha-production.conf.example` as the starting point — it already
+has the correct `ProxyPass`/`ProxyPassReverse` blocks for all three domains. Copy it,
+fill in your certificate paths, and include it from your main Apache config (or WHM's
+Include Editor if this is a cPanel box).
 
 If this server runs nginx instead of Apache, the equivalent is a `server {}` block per
 hostname with `proxy_pass http://127.0.0.1:PORT;` plus the usual
-`proxy_set_header Host $host;` / `X-Forwarded-For` headers — the original design intent
-was actually nginx-as-sole-listener (see `to-do.md`), Apache is just what's proven
-locally; either works, there's nothing in the app itself that assumes one or the other.
+`proxy_set_header Host $host;` / `X-Forwarded-For` headers — either works, nothing in
+the app itself assumes one or the other.
 
 Get certificates for all three hostnames before enabling the `:443` vhosts, e.g.:
 ```bash

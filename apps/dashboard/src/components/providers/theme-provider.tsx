@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useBranding } from "@/components/providers/branding-provider";
+import { THEME_STORAGE_KEY as STORAGE_KEY } from "@/lib/theme-no-flash-script";
 
 type Theme = "light" | "dark";
 
@@ -13,30 +15,18 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "pb-theme";
-
 // Public pages (login, the root redirector) always render light — theme choice is a
 // dashboard-only, per-user preference and must not leak onto the public-facing screens.
-function isPublicPath(pathname: string) {
-  return pathname === "/" || pathname === "/login";
+// loginPath is admin-configurable (Settings > General), so this can't be a fixed string.
+// Mirrors the pre-hydration inline script in lib/theme-no-flash-script.ts.
+function isPublicPath(pathname: string, loginPath: string) {
+  return pathname === "/" || pathname === `/${loginPath}`;
 }
-
-// Runs before paint (see the inline script in layout.tsx) so there is no flash-of-wrong-theme.
-// Mirrors isPublicPath() above since it can't import it (runs as a raw string pre-hydration).
-export const themeNoFlashScript = `
-(function () {
-  try {
-    var p = window.location.pathname;
-    if (p === '/' || p === '/login') return;
-    var t = localStorage.getItem('${STORAGE_KEY}');
-    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-  } catch (e) {}
-})();
-`;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
   const pathname = usePathname();
+  const { loginPath } = useBranding();
 
   useEffect(() => {
     // Reading localStorage can only happen post-mount; doing this via a lazy useState
@@ -49,8 +39,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isPublicPath(pathname) ? "light" : theme);
-  }, [theme, pathname]);
+    document.documentElement.setAttribute("data-theme", isPublicPath(pathname, loginPath) ? "light" : theme);
+  }, [theme, pathname, loginPath]);
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);

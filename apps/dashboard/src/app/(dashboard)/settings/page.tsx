@@ -23,10 +23,16 @@ type SettingsData = {
   language: string;
   available_regions: string[];
   discourage_indexing: boolean;
+  login_path: string;
   logo_path: string;
   favicon_path: string;
   cloudflare_configured: boolean;
 };
+
+function getDashboardBaseUrl() {
+  if (typeof window === "undefined") return "";
+  return window.location.origin;
+}
 
 type PermissionsMatrix = Record<string, Record<string, boolean>>;
 
@@ -66,7 +72,7 @@ export default function SettingsPage() {
   const [data, setData] = useState<SettingsData | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [general, setGeneral] = useState({ site_title: "", site_url: "", region: "GMT+8", language: "EN" });
+  const [general, setGeneral] = useState({ site_title: "", site_url: "", region: "GMT+8", language: "EN", login_path: "login" });
   const [discourageIndexing, setDiscourageIndexing] = useState(true);
   const [cfToken, setCfToken] = useState("");
   const [cfZone, setCfZone] = useState("");
@@ -86,7 +92,7 @@ export default function SettingsPage() {
     try {
       const result = await api.get<SettingsData>("/v1/settings");
       setData(result);
-      setGeneral({ site_title: result.site_title, site_url: result.site_url, region: result.region, language: result.language });
+      setGeneral({ site_title: result.site_title, site_url: result.site_url, region: result.region, language: result.language, login_path: result.login_path });
       setDiscourageIndexing(result.discourage_indexing);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not load settings.");
@@ -126,12 +132,23 @@ export default function SettingsPage() {
 
   async function handleSaveGeneral(e: React.FormEvent) {
     e.preventDefault();
-    const confirmed = await confirm({ title: "Update General Settings?", message: "These changes apply site-wide." });
+    const loginPathChanged = data && general.login_path !== data.login_path;
+    const confirmed = await confirm(
+      loginPathChanged
+        ? {
+            title: "Change The Login Page URL?",
+            message: `The login page will move to ${getDashboardBaseUrl()}/${general.login_path} — the old URL will stop working immediately for everyone, including you. Make sure you've noted the new one before continuing.`,
+            confirmLabel: "Change Login URL",
+            tone: "danger",
+          }
+        : { title: "Update General Settings?", message: "These changes apply site-wide." },
+    );
     if (!confirmed) return;
     setSaving(true);
     try {
       await api.patch("/v1/settings/general", general);
       toast.success("Settings updated successfully.");
+      await loadSettings();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Something went wrong.");
     } finally {
@@ -327,6 +344,21 @@ export default function SettingsPage() {
                 options={(data?.available_regions ?? ["GMT+8"]).map((r) => ({ value: r, label: r }))}
               />
               <Select id="settings-language" label="Language" value={general.language} onChange={(e) => setGeneral({ ...general, language: e.target.value })} options={LANGUAGE_OPTIONS} />
+
+              <Input
+                id="settings-login-path"
+                label="Login Path"
+                required
+                pattern="[a-z0-9-]{3,64}"
+                value={general.login_path}
+                onChange={(e) => setGeneral({ ...general, login_path: e.target.value.toLowerCase() })}
+              />
+              <p className="-mt-2 text-md text-foreground-muted">
+                The login page will be reachable at <code>{`${getDashboardBaseUrl()}/${general.login_path || "login"}`}</code>. The default{" "}
+                <code>/login</code> stops working the moment this is changed to anything else — lowercase letters, numbers and hyphens only, and it
+                can&apos;t collide with an existing page name (e.g. <code>dashboard</code>, <code>settings</code>).
+              </p>
+
               <div>
                 <Button id="settings-general-save" type="submit" variant="primary" disabled={saving}>
                   {saving ? "saving" : "save changes"}

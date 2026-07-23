@@ -3,19 +3,21 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSetupStatus } from "@/components/providers/setup-provider";
+import { useBranding } from "@/components/providers/branding-provider";
 
 // Opposite of GuestOnly — the wizard route is only reachable while the system genuinely
 // has zero users. Once setup is done, this route redirects away (checked server-side
 // too by SetupHandler.Complete, this is just so the page itself isn't dead-end reachable).
 export function SetupOnly({ children }: { children: React.ReactNode }) {
   const { needsSetup, loading } = useSetupStatus();
+  const { loginPath } = useBranding();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !needsSetup) {
-      router.replace("/login");
+      router.replace(`/${loginPath}`);
     }
-  }, [needsSetup, loading, router]);
+  }, [needsSetup, loading, loginPath, router]);
 
   if (loading || !needsSetup) {
     return (

@@ -9,8 +9,8 @@ import { SetupProvider } from "@/components/providers/setup-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <BrandingProvider>
+    <BrandingProvider>
+      <ThemeProvider>
         <SetupProvider>
           <ToastProvider>
             <ConfirmProvider>
@@ -18,7 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </ConfirmProvider>
           </ToastProvider>
         </SetupProvider>
-      </BrandingProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </BrandingProvider>
   );
 }

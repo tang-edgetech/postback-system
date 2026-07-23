@@ -3,22 +3,25 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
-type PublicSettings = { site_title: string; logo_path: string; favicon_path: string; discourage_indexing: boolean };
+type PublicSettings = { site_title: string; logo_path: string; favicon_path: string; discourage_indexing: boolean; login_path: string };
 
 type BrandingContextValue = {
   siteTitle: string;
   logoUrl: string | null;
   faviconUrl: string | null;
+  loginPath: string;
 };
 
-const BrandingContext = createContext<BrandingContextValue>({ siteTitle: "Postback System", logoUrl: null, faviconUrl: null });
+const DEFAULT_BRANDING: BrandingContextValue = { siteTitle: "Postback System", logoUrl: null, faviconUrl: null, loginPath: "login" };
+
+const BrandingContext = createContext<BrandingContextValue>(DEFAULT_BRANDING);
 
 function getApiBaseUrl() {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 }
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
-  const [branding, setBranding] = useState<BrandingContextValue>({ siteTitle: "Postback System", logoUrl: null, faviconUrl: null });
+  const [branding, setBranding] = useState<BrandingContextValue>(DEFAULT_BRANDING);
   const [discourageIndexing, setDiscourageIndexing] = useState(true);
 
   useEffect(() => {
@@ -29,6 +32,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
           siteTitle: res.site_title || "Postback System",
           logoUrl: res.logo_path ? `${getApiBaseUrl()}${res.logo_path}` : null,
           faviconUrl: res.favicon_path ? `${getApiBaseUrl()}${res.favicon_path}` : null,
+          loginPath: res.login_path || "login",
         });
         setDiscourageIndexing(res.discourage_indexing);
       } catch {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -38,16 +39,41 @@ func buildRegionList() []string {
 	return regions
 }
 
+// loginPathPattern mirrors the dashboard's [slug] route matcher — lowercase
+// letters/digits/hyphens only, so it's always a clean single URL segment.
+var loginPathPattern = regexp.MustCompile(`^[a-z0-9-]{3,64}$`)
+
+// reservedLoginPaths are the dashboard's other top-level routes — setting login_path to
+// one of these would make the login page permanently unreachable (the static route
+// always wins over the [slug] catch-all), silently locking everyone out. "login" itself
+// is deliberately not reserved — it's the default value and must remain settable.
+var reservedLoginPaths = map[string]bool{
+	"dashboard": true, "audit-logs": true, "campaigns": true, "links": true,
+	"merchants": true, "profile": true, "reports": true, "settings": true,
+	"users": true, "setup": true, "uploads": true, "_next": true,
+	"robots.txt": true, "favicon.ico": true, "default-favicon.ico": true,
+}
+
+func validateLoginPath(path string) error {
+	if !loginPathPattern.MatchString(path) {
+		return fmt.Errorf("Login path must be 3-64 lowercase letters, numbers or hyphens")
+	}
+	if reservedLoginPaths[path] {
+		return fmt.Errorf("\"%s\" is a reserved route and can't be used as the login path", path)
+	}
+	return nil
+}
+
 func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	var siteTitle, siteURL, logoPath, faviconPath sql.NullString
-	var region, language string
+	var region, language, loginPath string
 	var discourageIndexing bool
 	var cfTokenEnc, cfZoneEnc sql.NullString
 
 	err := h.DB.QueryRowContext(r.Context(),
-		`SELECT site_title, site_url, region, language, discourage_indexing, logo_path, favicon_path, cf_api_token_encrypted, cf_zone_id_encrypted
+		`SELECT site_title, site_url, region, language, discourage_indexing, login_path, logo_path, favicon_path, cf_api_token_encrypted, cf_zone_id_encrypted
 		 FROM settings WHERE id = 1`,
-	).Scan(&siteTitle, &siteURL, &region, &language, &discourageIndexing, &logoPath, &faviconPath, &cfTokenEnc, &cfZoneEnc)
+	).Scan(&siteTitle, &siteURL, &region, &language, &discourageIndexing, &loginPath, &logoPath, &faviconPath, &cfTokenEnc, &cfZoneEnc)
 	if err != nil {
 		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not load settings")
 		return
@@ -60,6 +86,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"language":              language,
 		"available_regions":     availableRegions,
 		"discourage_indexing":   discourageIndexing,
+		"login_path":            loginPath,
 		"logo_path":             logoPath.String,
 		"favicon_path":          faviconPath.String,
 		"cloudflare_configured": cfTokenEnc.Valid && cfTokenEnc.String != "" && cfZoneEnc.Valid && cfZoneEnc.String != "",
@@ -68,12 +95,15 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Public exposes only branding fields (no auth) — the Login page and the sidebar need
 // site_title/logo/favicon before (or regardless of) any session existing, but nothing
-// else on /v1/settings is safe to leak pre-auth.
+// else on /v1/settings is safe to leak pre-auth. login_path is included here too — the
+// dashboard's [slug] route has to know it pre-auth to decide whether to render the
+// login form or 404, and the app shell needs it to build every "go to login" redirect.
 func (h *SettingsHandler) Public(w http.ResponseWriter, r *http.Request) {
 	var siteTitle, logoPath, faviconPath sql.NullString
 	var discourageIndexing bool
-	if err := h.DB.QueryRowContext(r.Context(), `SELECT site_title, logo_path, favicon_path, discourage_indexing FROM settings WHERE id = 1`).
-		Scan(&siteTitle, &logoPath, &faviconPath, &discourageIndexing); err != nil {
+	var loginPath string
+	if err := h.DB.QueryRowContext(r.Context(), `SELECT site_title, logo_path, favicon_path, discourage_indexing, login_path FROM settings WHERE id = 1`).
+		Scan(&siteTitle, &logoPath, &faviconPath, &discourageIndexing, &loginPath); err != nil {
 		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not load settings")
 		return
 	}
@@ -82,6 +112,7 @@ func (h *SettingsHandler) Public(w http.ResponseWriter, r *http.Request) {
 		"logo_path":           logoPath.String,
 		"favicon_path":        faviconPath.String,
 		"discourage_indexing": discourageIndexing,
+		"login_path":          loginPath,
 	})
 }
 
@@ -90,6 +121,7 @@ type updateGeneralRequest struct {
 	SiteURL   string `json:"site_url"`
 	Region    string `json:"region"`
 	Language  string `json:"language"`
+	LoginPath string `json:"login_path"`
 }
 
 func (h *SettingsHandler) UpdateGeneral(w http.ResponseWriter, r *http.Request) {
@@ -117,6 +149,15 @@ func (h *SettingsHandler) UpdateGeneral(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	req.LoginPath = strings.ToLower(strings.TrimSpace(req.LoginPath))
+	if req.LoginPath == "" {
+		req.LoginPath = "login"
+	}
+	if err := validateLoginPath(req.LoginPath); err != nil {
+		httpresp.JSONError(w, http.StatusBadRequest, "invalid_request", err.Error())
+		return
+	}
+
 	req.SiteURL = strings.TrimSpace(req.SiteURL)
 	if req.SiteURL == "" {
 		if origin := r.Header.Get("Origin"); origin != "" {
@@ -125,8 +166,8 @@ func (h *SettingsHandler) UpdateGeneral(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if _, err := h.DB.ExecContext(r.Context(),
-		`UPDATE settings SET site_title = ?, site_url = ?, region = ?, language = ? WHERE id = 1`,
-		req.SiteTitle, req.SiteURL, req.Region, req.Language,
+		`UPDATE settings SET site_title = ?, site_url = ?, region = ?, language = ?, login_path = ? WHERE id = 1`,
+		req.SiteTitle, req.SiteURL, req.Region, req.Language, req.LoginPath,
 	); err != nil {
 		httpresp.JSONError(w, http.StatusInternalServerError, "server_error", "Could not update settings")
 		return

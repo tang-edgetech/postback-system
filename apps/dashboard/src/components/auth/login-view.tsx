@@ -13,7 +13,10 @@ import { ApiError } from "@/lib/api";
 import { withMinDelay } from "@/lib/min-delay";
 import { toTitleCase } from "@/lib/titlecase";
 
-export default function LoginPage() {
+// Rendered by the dashboard's [slug] route once it's confirmed the requested slug
+// matches the configured login path (Settings > General) — never mounted directly at a
+// fixed URL, so the login screen's actual location stays admin-configurable.
+export function LoginView() {
   return (
     <GuestOnly>
       <LoginForm />
