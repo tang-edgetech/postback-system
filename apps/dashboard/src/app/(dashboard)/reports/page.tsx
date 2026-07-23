@@ -340,50 +340,64 @@ export default function ReportsPage() {
             </div>
           </div>
 
+          {result.total_clicks === 0 && result.total_postbacks === 0 && (
+            <p className="rounded-lg border border-border bg-surface p-4 text-foreground-muted">
+              No clicks or postbacks were recorded for the selected filters and date range — try widening the date range or clearing some filters.
+            </p>
+          )}
+
           <div className="rounded-lg border border-border bg-surface p-4">
             <h2 className="text-[20px] leading-7 font-semibold text-foreground">Clicks &amp; Postbacks Trend</h2>
-            <div className="mt-3 h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="clicks" name="Clicks" stroke={PALETTE[0]} strokeWidth={2} />
-                  <Line type="monotone" dataKey="postbacks" name="Postbacks" stroke={PALETTE[1]} strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            {trendData.length === 0 ? (
+              <p className="mt-3 text-foreground-muted">No data available for this range.</p>
+            ) : (
+              <div className="mt-3 h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="clicks" name="Clicks" stroke={PALETTE[0]} strokeWidth={2} />
+                    <Line type="monotone" dataKey="postbacks" name="Postbacks" stroke={PALETTE[1]} strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {[
-              { title: "Device Breakdown", rows: result.device_breakdown },
-              { title: "OS Breakdown", rows: result.os_breakdown },
-              { title: "Browser Breakdown", rows: result.browser_breakdown },
+              { title: "Device Breakdown", rows: result.device_breakdown ?? [] },
+              { title: "OS Breakdown", rows: result.os_breakdown ?? [] },
+              { title: "Browser Breakdown", rows: result.browser_breakdown ?? [] },
             ].map(({ title, rows }) => (
               <div key={title} className="rounded-lg border border-border bg-surface p-4">
                 <h2 className="text-[18px] leading-6 font-semibold text-foreground">{title}</h2>
-                <div className="mt-2 h-56 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={rows}
-                        dataKey="count"
-                        nameKey="label"
-                        outerRadius={80}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        label={(entry: any) => `${entry.label} (${entry.pct.toFixed(0)}%)`}
-                      >
-                        {rows.map((_, i) => (
-                          <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                {rows.length === 0 ? (
+                  <p className="mt-2 text-foreground-muted">No data available.</p>
+                ) : (
+                  <div className="mt-2 h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={rows}
+                          dataKey="count"
+                          nameKey="label"
+                          outerRadius={80}
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          label={(entry: any) => `${entry.label} (${entry.pct.toFixed(0)}%)`}
+                        >
+                          {rows.map((_, i) => (
+                            <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -391,17 +405,21 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-border bg-surface p-4">
               <h2 className="text-[20px] leading-7 font-semibold text-foreground">Top Links By Clicks</h2>
-              <div className="mt-3 h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={result.top_links}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="slug" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="clicks" name="Clicks" fill={PALETTE[0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {(result.top_links ?? []).length === 0 ? (
+                <p className="mt-3 text-foreground-muted">No links have recorded clicks in this range.</p>
+              ) : (
+                <div className="mt-3 h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={result.top_links}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="slug" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="clicks" name="Clicks" fill={PALETTE[0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
 
             <div className="rounded-lg border border-border bg-surface p-4">
@@ -416,14 +434,14 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.conversion_by_event.length === 0 && (
+                    {(result.conversion_by_event ?? []).length === 0 && (
                       <tr>
                         <td colSpan={3} className="px-2 py-4 text-center text-foreground-muted">
                           No postbacks in this range.
                         </td>
                       </tr>
                     )}
-                    {result.conversion_by_event.map((row) => (
+                    {(result.conversion_by_event ?? []).map((row) => (
                       <tr key={row.event_name} className="border-t border-border">
                         <td className="px-2 py-2 text-foreground">{row.event_name}</td>
                         <td className="px-2 py-2 text-foreground-muted">{row.count.toLocaleString()}</td>

@@ -235,7 +235,7 @@ func (h *ReportsHandler) breakdown(ctx context.Context, column string, f reportF
 	}
 	defer rows.Close()
 
-	var out []breakdownRow
+	out := []breakdownRow{}
 	total := 0
 	for rows.Next() {
 		var row breakdownRow
